@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.1",
+  "version": 1,
+  "avatars": [],
+  "selection_policy": {
+    "require_portrait_rights": true,
+    "match_source_age_presentation": true,
+    "match_source_pose_and_lighting": true,
+    "do_not_change_identity_without_explicit_selection": true
+  }
+}

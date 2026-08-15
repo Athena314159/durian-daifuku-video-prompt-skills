@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.1",
+  "project_id": "PROJECT_ID",
+  "project_name": "PROJECT_NAME",
+  "status": "draft",
+  "platform": "jimeng",
+  "aspect_ratio": "9:16",
+  "generation_mode": "image_to_video",
+  "source_video": null,
+  "product_profile": "PRODUCT_PROFILE",
+  "style_profile": "STYLE_PROFILE",
+  "project_rules": {
+    "preserve_source_composition": true,
+    "speech_strategy": "adaptive_from_script_and_source",
+    "allow_on_screen_speech": true,
+    "allow_voiceover": true,
+    "lip_sync_only_when_speaking": true,
+    "subtitles_generated_by_model": false,
+    "watermark_allowed": false,
+    "packaging_visible": false
+  },
+  "commercial": {
+    "intended_use": "internal_test",
+    "source_rights_cleared": false,
+    "portrait_rights_cleared": false,
+    "music_rights_cleared": false,
+    "claims_approved": false,
+    "reviewer": null,
+    "approved_at": null
+  },
+  "created_at": "CREATED_AT",
+  "updated_at": "CREATED_AT"
+}
