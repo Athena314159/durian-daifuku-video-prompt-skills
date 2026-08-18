@@ -1,6 +1,7 @@
 ---
 name: jimeng-video-remix-director
-description: "Build and operate a persistent commercial workflow for Jimeng short-video adaptation: analyze a source video and user subtitle script, decide per segment between voice-over/on-screen speech/silence, reason about story logic and visual pacing, restrict shots to product showcase/person-product showcase/person eating, split shots and action beats, extract each shot's exact first temporal frame separately from beauty keyframes, preserve source composition while replacing the product with durian daifuku, compile detailed prompts, enforce product/style/correction/knowledge memory, manage future face-replacement avatar assets, and create compact pre-generation shot cards. Use for 即梦/Jimeng 榴莲大福 UGC、原视频复刻、字幕稿匹配、人物说话与画外音规划、逐镜首帧、改图、Prompt 拆解、知识库引用或本地视频工作台流程。"
+description: >-
+  Build and operate a persistent commercial workflow for Jimeng short-video adaptation, including source-video and subtitle analysis, voice-over/on-screen speech/silence decisions, story logic and pacing, shot and action-beat splitting, exact temporal first frames kept separate from beauty keyframes, product replacement using the selected product-specific bible such as durian daifuku or 达尔顿黄油脆丝棒, prompt compilation, approved-first-frame validation, supplied-Jimeng-result review, failed product geometry or texture recovery, and avatar asset management. Use for 即梦/Jimeng UGC、原视频复刻、字幕稿匹配、逐镜首帧、换产品、黄油脆丝棒、包装尺寸、产品材质走样、改图、Prompt 拆解、生成结果审核或本地视频工作台流程。
 ---
 
 # 即梦视频改款导演
@@ -13,9 +14,9 @@ description: "Build and operate a persistent commercial workflow for Jimeng shor
 
 1. 用户提供的原视频。
 2. 用户提供的字幕稿。
-3. 榴莲大福产品参考图或已批准产品库条目。
+3. 目标产品参考图或已批准的对应产品库条目。
 
-缺少字幕稿时可以提取素材和分析原片，但不要决定人物讲话/画外音比例，也不要编译最终 Prompt。当前产品只使用 `durian-daifuku-v1`。
+缺少字幕稿时可以提取素材和分析原片，但不要决定人物讲话/画外音比例，也不要编译最终 Prompt。每个项目只选择一个产品规范；目标为黄油脆丝棒时，使用 `$extract-video-prompt` 的 `references/products/butter-crisp-stick.md` 与实际资产，不得注入榴莲大福物理。
 
 ## 核心边界
 
@@ -26,7 +27,7 @@ description: "Build and operate a persistent commercial workflow for Jimeng shor
 5. 每个分镜的 `source_first_frame` 必须是该分镜时间码的第一个真实帧。
 6. `selected_beauty_keyframe` 是另选的美观参考帧，不能替代分镜首帧。
 7. 只修改用户授权修改的元素；保持原构图时锁定人物、动作、机位、场景、光线和空间关系。
-8. 不执行“审核即梦生成结果、差异返修 Prompt”流程。本 Skill 的检查发生在生成前：字幕策略、分镜结构、Prompt 完整性、节奏和商业权利。
+8. 生成前必须审核字幕策略、分镜结构、Prompt、首帧、产品参考绑定、节奏和商业权利。用户提供即梦结果或指出生成差异时，必须继续做结果审核与单镜返工；不得用“本 Skill 只负责生成前”跳过可见的产品、人物、动作或包装错误。
 
 ## 1. 初始化
 
@@ -34,7 +35,7 @@ description: "Build and operate a persistent commercial workflow for Jimeng shor
 python3 <skill-dir>/scripts/init_project.py \
   --name <project-name> \
   --output <projects-directory> \
-  --product-profile durian-daifuku-v1 \
+  --product-profile <selected-product-profile> \
   --style-profile ugc-food-review-v1
 ```
 
@@ -42,7 +43,7 @@ python3 <skill-dir>/scripts/init_project.py \
 
 - `planning/story_plan.json`：字幕、声音方式、叙事逻辑、画面占比和节奏。
 - `shots/shot_manifest.json`：逐镜事实、动作、声音、首帧和参考资产。
-- `library/product_bible.json`：榴莲大福固定质感。
+- `library/product_bible.json`：当前唯一目标产品的固定结构、尺寸、状态和错误排除。
 - `library/style_bible.json`：人物、场景、摄影和声音风格。
 - `library/correction_memory.json`：长期纠错。
 - `library/knowledge_index.json`：按镜头条件调用的 Prompt、规则和图片。
@@ -119,7 +120,23 @@ python3 <skill-dir>/scripts/extract_shot_frames.py \
 
 记录命中的条目 ID 和版本。不要把整个知识库无差别塞入每条 Prompt；冲突时以镜头硬约束、项目规则和产品规范优先。
 
-## 6. 数字人库
+黄油脆丝棒裸产品镜头必须实际绑定产品 `细节.jpg`，并把“实体片状覆盖层而非光滑基底上的图案”写入镜头硬约束。出现外盒时锁定用户确认的 `15 × 15 × 4.5 cm`，同时写明 1:1 正方形正面、约 0.3 边长盒厚和扁方盒；数字不能只存在于项目备注。
+
+涉及产品或包装尺寸时，生成包必须先声明唯一 `scale_mode`。常规跨镜一致性使用 `physical_consistency`，执行实体 12 cm / 15 cm / 0.80 与透视规则；只有用户明确要求“基于某张原始批准帧缩小或放大百分比”时使用 `relative_pixel_resize`。后者以该原帧为唯一视觉尺寸事实源，百分比一律按线性宽高倍率解释，并把绝对厘米值、0.80 投影目标和其他镜头尺寸排除出本轮画面硬约束；实体数字仅保留为元数据。两种模式同时出现时触发 `SCALE_MODE_COLLISION`，禁止生成。
+
+## 6. 批准首帧与生成结果闸门
+
+批准首帧前，查看全图和每个产品/包装原尺寸局部。黄油脆丝棒局部必须与 `细节.jpg` 同尺度并排检查：片状碎片顶面、侧边厚度、前后遮挡、翘边、窄缝、微投影和轮廓凸出缺一不可。贴图、印刷纹、划痕、浅浮雕、压花、均匀卷曲细线或光滑橙色基底触发 `PRODUCT_MICROSTRUCTURE_FLATTENED`；不能以“微纹理差异”批准。
+
+盘装镜头必须把每根产品当作独立实例，以批准首帧记录中心位置、长轴方向、上下层级、交叉点、露出端、遮挡比例和盘沿关系。产品参考图只负责形体与材质，不得把参考图的堆法覆盖到已有镜头。原帧为松散交错堆放而结果变成两排平码、平行阵列、扇形、网格、金字塔或广告式整齐陈列时，触发 `PLATE_LAYOUT_MISMATCH`；即使根数相同也不得批准。
+
+外盒在两种模式下都逐盒检查 1:1 正面、约为边长 30% 的盒厚和同框多盒结构一致。`physical_consistency` 额外检查 `15 × 15 × 4.5 cm` 的可见比例；`relative_pixel_resize` 改为检查相对唯一源帧的目标线性倍率及人物、盘子、独立袋、镜头等 `1.00` 不变量。薄纸片、立方体、砖形厚盒、长条盒、不同盒厚或明显过缩/欠缩均不得批准。
+
+同时执行产品—包装尺度联合审核。`physical_consistency` 的物理基准为 `12 cm 单根 / 15 cm 盒面边长 = 0.80`，只有同平面且朝向可比时才直接测像素比，跨景深先校正。`relative_pixel_resize` 则记录源/结果边界框和每类线性倍率；只有确定性蒙版变换并测量后才能声称精确百分比，生成式编辑只能标记近似。包装尺寸、单根长度、实体片状微结构、盘中拓扑和 `1.00` 不变量必须同轮通过；修一项导致另一项回退时触发 `PRODUCT_PACKAGE_JOINT_LOCK_FAILED`，从原始批准帧单次重做，禁止继续叠修。
+
+收到即梦视频后至少检查 0 秒、产品开始移动后、接近嘴部前和接触/断裂时。产品实体碎片的遮挡、高光和微阴影须随运动产生连续轻微视差；运动中融平成纹样仍判失败。从原场景首帧和正确产品参考单次重做失败镜，不在失败视频或失败生成图上叠修。
+
+## 7. 数字人库
 
 用户以后补充人物素材时写入 `library/avatar_library.json`。每个数字人至少保存：
 
@@ -129,7 +146,7 @@ python3 <skill-dir>/scripts/extract_shot_frames.py \
 
 未明确选择数字人或肖像权未确认时，不自动换脸。
 
-## 7. 编译
+## 8. 编译
 
 ```bash
 python3 <skill-dir>/scripts/pipeline.py lint --project-dir <project-directory>
@@ -145,12 +162,12 @@ python3 <skill-dir>/scripts/pipeline.py compile --project-dir <project-directory
 
 聊天中优先交付短分镜确认卡；除非用户要求，不展开全部长 Prompt。
 
-## 8. 工作台
+## 9. 工作台
 
 UI 不替代 Skill，而是读写同一套 JSON 项目。架构和 API 边界见 [references/workbench-architecture.md](references/workbench-architecture.md)。
 
 工作台至少提供：项目导入、字幕策略、故事结构、分镜时间线、首帧/美观帧选择、Prompt 检查、知识库、数字人库和生成包导出。所有关键决定必须可追溯到字幕段、原片时间码、知识库条目和规则版本。
 
-## 9. 商业闸门
+## 10. 商业闸门
 
 商业发布前读取 [references/commercial-gate.md](references/commercial-gate.md)。未清原视频、肖像、音乐、字体、产品声明和参考素材权利时，可内部测试但不能标记为可发布。

@@ -1,4 +1,4 @@
 interface:
   display_name: "提取视频prompt skill"
-  short_description: "锁定说话人与镜内外关系，复刻动作并生成有活人感的逐镜Prompt"
-  default_prompt: "使用 $extract-video-prompt 先提取原口播给我修改，再锁定人物、复刻全部原片动作并生成榴莲大福完整版与逐镜 TXT。"
+  short_description: "复刻原片并锁定人物、产品结构、包装尺寸和交付"
+  default_prompt: "使用 $extract-video-prompt 提取并复刻原视频；按目标产品像素锁定材质与包装尺寸，并诊断换脸、首帧、Prompt、分镜回填和 Word 断层。"

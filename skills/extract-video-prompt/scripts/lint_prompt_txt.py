@@ -22,6 +22,7 @@ PROMPT_RE = re.compile(
     r"【完整Prompt(?:｜主体非空白字符数：\d+)?】\s*(.*?)(?=\n【(?:原片动作对应|内容审核记录)】|\n={10,}|\Z)",
     re.S,
 )
+PROMPT_COUNT_RE = re.compile(r"【完整Prompt｜主体非空白字符数：(\d+)】")
 SCRIPT_RE = re.compile(r"【口播稿】\s*(.*?)(?=\n【完整Prompt|\n={10,}|\Z)", re.S)
 FIELD_RE = re.compile(r"(?m)^(?P<name>人物位置|声音方式|产品形态)：(?P<value>.*)$")
 TIME_RE = re.compile(r"(?m)^\s*0\.00(?:0)?\s*(?:秒)?\s*[–—-]")
@@ -84,6 +85,19 @@ BITE_CHAIN_GROUPS = {
 VISIBLE_TERMS = ("出现", "出镜", "进入画面", "露出", "可见", "纳入画面", "展示")
 BODY_TERMS = ("脸", "侧脸", "嘴", "头发", "头部", "身体", "影子", "倒影", "自拍")
 NEGATIVE_TERMS = ("不出现", "不出镜", "不得", "禁止", "严禁", "不能", "不可", "避免", "不生成", "绝不")
+BUTTER_CRISP_PRODUCT_TERMS = ("黄油脆丝棒", "脆丝棒")
+BUTTER_CRISP_BARE_STATE_TERMS = ("完整未破", "开袋并露出", "手持", "摆盘", "掰断", "断面", "咬食", "咬口", "碎屑")
+BUTTER_CRISP_MATERIAL_GROUPS = {
+    "实体片状覆盖层": ("实体片状", "片状脆丝", "片状碎片", "实体脆丝碎片", "实体材料层"),
+    "独立厚度": ("自身厚度", "独立厚度", "侧边厚度"),
+    "遮挡与缝隙": ("前后遮挡", "互相遮挡", "重叠缝隙", "不规则窄缝", "暗缝"),
+    "轮廓凸出": ("轮廓凸出", "凸出并打破", "打破长边轮廓", "打破干净外轮廓"),
+    "平面图案排除": ("平面贴图", "印刷图案", "浅浮雕", "压花", "光滑橙色基底"),
+}
+BUTTER_CRISP_BOX_STATE_TERMS = ("零售外盒", "外盒", "三盒", "两盒", "一盒", "盒体", "包装盒")
+BUTTER_CRISP_BOX_DIMENSION_TERMS = ("15 × 15 × 4.5", "15×15×4.5", "15*15*4.5")
+BUTTER_CRISP_BOX_RATIO_TERMS = ("1:1", "正方形正面", "正面近似正方形")
+BUTTER_CRISP_BOX_DEPTH_TERMS = ("30%", "0.3边长", "0.3 边长", "厚度约为正面边长")
 
 
 @dataclass(frozen=True)
@@ -184,8 +198,14 @@ def lint_shot(title: str, block: str) -> tuple[list[Issue], str, list[tuple[str,
 
     prompt = prompt_match.group(1).strip()
     char_count = len(re.sub(r"\s+", "", prompt))
+    if char_count < 3000:
+        issues.append(Issue("PROMPT_TOO_SHORT", f"{sid} Prompt 只有 {char_count} 个非空白字符，完整编译至少需要 3000 个"))
     if char_count > 4000:
         issues.append(Issue("PROMPT_TOO_LONG", f"{sid} Prompt 有 {char_count} 个非空白字符"))
+    count_match = PROMPT_COUNT_RE.search(block)
+    if not count_match or int(count_match.group(1)) != char_count:
+        stated = count_match.group(1) if count_match else "缺失"
+        issues.append(Issue("PROMPT_CHAR_COUNT_MISMATCH", f"{sid} 标注字符数为 {stated}，程序实算为 {char_count}"))
     if not TIME_RE.search(prompt):
         issues.append(Issue("GENERATION_TIME_NOT_ZERO", f"{sid} 未找到从 0.00 秒开始的动作时间"))
     if not has_no_text_rule(prompt):
@@ -194,6 +214,24 @@ def lint_shot(title: str, block: str) -> tuple[list[Issue], str, list[tuple[str,
     product_state = field(block, "产品形态")
     if INTERNAL_PRODUCT_RE.search(product_state):
         issues.append(Issue("PRODUCT_STATE_LABEL_NOT_CHINESE", f"{sid} 产品形态使用了内部英文或字母标签：{product_state}"))
+
+    is_butter_crisp = any(term in product_state or term in prompt for term in BUTTER_CRISP_PRODUCT_TERMS)
+    if is_butter_crisp and any(term in product_state for term in BUTTER_CRISP_BARE_STATE_TERMS):
+        for label, words in BUTTER_CRISP_MATERIAL_GROUPS.items():
+            if not any(word in prompt for word in words):
+                issues.append(
+                    Issue(
+                        "PRODUCT_MICROSTRUCTURE_RULE_MISSING",
+                        f"{sid} 黄油脆丝棒裸产品 Prompt 缺少{label}规则，可能退化成表面图案",
+                    )
+                )
+    if is_butter_crisp and any(term in product_state for term in BUTTER_CRISP_BOX_STATE_TERMS):
+        if not any(term in prompt for term in BUTTER_CRISP_BOX_DIMENSION_TERMS):
+            issues.append(Issue("PACKAGE_DIMENSION_LOCK_MISSING", f"{sid} 黄油脆丝棒外盒缺少 15×15×4.5 cm 尺寸锁"))
+        if not any(term in prompt for term in BUTTER_CRISP_BOX_RATIO_TERMS):
+            issues.append(Issue("PACKAGE_DIMENSION_LOCK_MISSING", f"{sid} 黄油脆丝棒外盒缺少 1:1 正方形正面约束"))
+        if not any(term in prompt for term in BUTTER_CRISP_BOX_DEPTH_TERMS):
+            issues.append(Issue("PACKAGE_DIMENSION_LOCK_MISSING", f"{sid} 黄油脆丝棒外盒缺少约 0.3 边长盒厚约束"))
 
     status = STATUS_RE.search(block)
     if status:

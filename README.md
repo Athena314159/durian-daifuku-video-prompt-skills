@@ -2,11 +2,18 @@
 
 一套可安装到 Codex 的短视频复刻与榴莲大福植入工作流。它会先分析原视频并提交原口播稿/字幕供用户修改，再锁定人物身份、出镜状态和原片动作，最后按分镜生成适用于即梦的视频 Prompt 与 TXT 交付稿。
 
-## 包含的 Skills
+## 两类能力与三个 Skills
+
+这个仓库不是两个彼此独立的 Skill，而是两类能力共用三个小 Skill：
+
+1. **视频分析与 Prompt 生成**：由 `extract-video-prompt` 作为主入口，调用 `jimeng-video-remix-director` 完成原视频分析、口播/字幕交接、拆镜、首帧与候选帧提取、动作和人物表演复刻，以及即梦 Prompt 编译。
+2. **提取视频帧后替换产品主体**：由 `jimeng-video-remix-director` 提取准确首帧与美观候选帧，再由 `durian-daifuku-five-states` 按产品规格、参考图角色和五形态物理连续性替换画面主体；最终结果回到主流程继续生成分镜与 Prompt。
+
+因此，完整更新和安装时需要同时保留以下三个目录：
 
 - `extract-video-prompt`：主入口。负责原视频分析、口播回传、人物与出镜锁定、逐分镜 Prompt、质量门禁和 TXT 输出。
-- `jimeng-video-remix-director`：负责镜头结构、首帧、动作节拍、人物表演、口播/画外音规划和即梦工作台流程。
-- `durian-daifuku-five-states`：负责约 7 厘米榴莲大福的外观、五种产品形态、物理连续性与人物交互一致性。
+- `jimeng-video-remix-director`：负责镜头结构、视频素材和镜头帧提取、准确首帧与美观候选帧分离、动作节拍、人物表演、口播/画外音规划和即梦工作台流程。
+- `durian-daifuku-five-states`：负责把图片或视频帧中的主要食品主体替换为约 7 厘米榴莲大福，并控制五种产品形态、物理连续性与人物交互一致性。
 
 三个目录需要一起安装；主 Skill 会在适合的镜头调用另外两个 Skill 的规则。
 

@@ -11,7 +11,7 @@ from pathlib import Path
 from lint_prompt_txt import lint
 
 
-GOOD_PROMPT = """4:3真实手机生活拍摄。视频核心是男生藏着礼物回家、等镜头后的女生反应。男生始终在画面中；女生始终在镜头后，不出镜，不生成她的脸、嘴、身体、影子或倒影。男生先看盒子，再抬眼看向镜头后的女生，视线在礼物与她之间移动。听见她问话后，他眉峰短促抬起、眼睑放松、鼻翼轻动、嘴角压住笑；肩颈先绷紧再放松，重心前移，手指扣住盒底、手腕轻转。开口前短促吸气，停顿半拍再换气；采用轻微川渝年轻情侣城市口音，声音中低，平翘舌不刻意咬得过正，起音轻，语速稍快，重音落在礼物名称，尾音带笑，不夸张模仿方言。场景保留普通住宅暖顶灯、门口脚步、包装摩擦和手机自动对焦。
+BASE_GOOD_PROMPT = """4:3真实手机生活拍摄。视频核心是男生藏着礼物回家、等镜头后的女生反应。男生始终在画面中；女生始终在镜头后，不出镜，不生成她的脸、嘴、身体、影子或倒影。男生先看盒子，再抬眼看向镜头后的女生，视线在礼物与她之间移动。听见她问话后，他眉峰短促抬起、眼睑放松、鼻翼轻动、嘴角压住笑；肩颈先绷紧再放松，重心前移，手指扣住盒底、手腕轻转。开口前短促吸气，停顿半拍再换气；采用轻微川渝年轻情侣城市口音，声音中低，平翘舌不刻意咬得过正，起音轻，语速稍快，重音落在礼物名称，尾音带笑，不夸张模仿方言。场景保留普通住宅暖顶灯、门口脚步、包装摩擦和手机自动对焦。
 
 0.00–1.00秒：女生在镜头后说“今天七夕几点了才回来？”。男生听见后停止手部动作，抬眼看向镜头后的女生，嘴角想笑又压住。
 
@@ -19,8 +19,34 @@ GOOD_PROMPT = """4:3真实手机生活拍摄。视频核心是男生藏着礼物
 """
 
 
+def build_valid_prompt() -> str:
+    """Create a 3000–4000-character positive fixture with distinct execution checks."""
+    dimensions = (
+        "人物视线和眉眼反应",
+        "肩颈重心与衣料惯性",
+        "手指受力和包装形变",
+        "产品数量与破损连续性",
+        "手机焦点和景深过渡",
+        "室内光向与肤色曝光",
+        "现场声音和呼吸停顿",
+        "镜头起止状态可衔接性",
+    )
+    details = []
+    for index in range(44):
+        dimension = dimensions[index % len(dimensions)]
+        details.append(
+            f"执行检查{index + 1:02d}：逐帧核对{dimension}，动作必须有准备、发生、受力反馈和稳定落点，"
+            "不得用跳帧、悬空、突然变形或无来源位移替代连续运动。"
+        )
+    return BASE_GOOD_PROMPT + "\n".join(details)
+
+
+GOOD_PROMPT = build_valid_prompt()
+
+
 def make_txt(*, speaker: str = "女生", extra_prompt: str = "", product: str = "完整未破、手持展示") -> str:
     prompt = GOOD_PROMPT + extra_prompt
+    char_count = len("".join(prompt.split()))
     return f"""==================================================
 S001｜“今天七夕几点了才回来？”
 ==================================================
@@ -34,7 +60,7 @@ S001｜“今天七夕几点了才回来？”
 【口播稿】
 {speaker}：“今天七夕几点了才回来？”
 
-【完整Prompt｜主体非空白字符数：100】
+【完整Prompt｜主体非空白字符数：{char_count}】
 {prompt}
 【原片动作对应】
 - 原片 00:00.000–00:01.000 的男生停步和抬眼，对应生成镜内 0.00–1.00 秒。
@@ -91,6 +117,19 @@ class PromptLintRegressionTests(unittest.TestCase):
     def test_correct_onscreen_man_offscreen_woman(self):
         self.assertEqual([], self.run_lint(make_txt(), make_role_lock()))
 
+    def test_prompt_below_3000_is_blocked(self):
+        text = make_txt().replace(GOOD_PROMPT, BASE_GOOD_PROMPT)
+        issues = self.run_lint(text, make_role_lock())
+        self.assert_has_code(issues, "PROMPT_TOO_SHORT")
+
+    def test_declared_prompt_count_must_match_computed_count(self):
+        text = make_txt().replace(
+            f"主体非空白字符数：{len(''.join(GOOD_PROMPT.split()))}",
+            "主体非空白字符数：3000",
+        )
+        issues = self.run_lint(text, make_role_lock())
+        self.assert_has_code(issues, "PROMPT_CHAR_COUNT_MISMATCH")
+
     def test_wrong_speaker_is_blocked(self):
         issues = self.run_lint(make_txt(speaker="男生"), make_role_lock())
         self.assert_has_code(issues, "DIALOGUE_SPEAKER_MISMATCH")
@@ -128,6 +167,29 @@ class PromptLintRegressionTests(unittest.TestCase):
         role["speech_plan"]["disclosed_to_user"] = False
         issues = self.run_lint(make_txt(), role)
         self.assert_has_code(issues, "ACCENT_PROPOSAL_NOT_DISCLOSED")
+
+    def test_butter_crisp_bare_product_requires_physical_microstructure(self):
+        issues = self.run_lint(make_txt(product="黄油脆丝棒完整未破、手持展示"), make_role_lock())
+        self.assert_has_code(issues, "PRODUCT_MICROSTRUCTURE_RULE_MISSING")
+
+    def test_butter_crisp_box_requires_confirmed_dimensions_and_ratios(self):
+        issues = self.run_lint(make_txt(product="黄油脆丝棒未开封零售外盒"), make_role_lock())
+        self.assert_has_code(issues, "PACKAGE_DIMENSION_LOCK_MISSING")
+
+    def test_butter_crisp_structure_and_box_dimensions_can_pass(self):
+        extra = (
+            "黄油脆丝棒六面是实体片状脆丝覆盖层，每块有自身厚度和侧边厚度，形成前后遮挡、"
+            "重叠缝隙与不规则窄缝；少量碎片轮廓凸出并打破干净外轮廓。禁止平面贴图、"
+            "印刷图案、浅浮雕、压花或光滑橙色基底。外盒严格15×15×4.5 cm，正面1:1正方形，"
+            "厚度约为正面边长30%，是一只扁方盒。"
+        )
+        issues = self.run_lint(
+            make_txt(product="黄油脆丝棒完整未破手持与未开封零售外盒", extra_prompt=extra),
+            make_role_lock(),
+        )
+        blocked = {issue.code for issue in issues}
+        self.assertNotIn("PRODUCT_MICROSTRUCTURE_RULE_MISSING", blocked)
+        self.assertNotIn("PACKAGE_DIMENSION_LOCK_MISSING", blocked)
 
 
 if __name__ == "__main__":

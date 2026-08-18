@@ -45,11 +45,18 @@ description: Replace the main food product in an existing image with a physicall
 ## 参考资产
 
 - `assets/shell-color-surface-clean.png`：完整皮面颜色、明度、平滑粉感主参考；不继承盘子、尺寸、构图和光线。
-- `assets/shell-color-surface-v1.png`、`assets/shell-color-surface-v3.png`：仅辅助核对同一颜色/材质体系；不继承可见微纹。
+- `assets/shell-color-surface-v1.png`：仅辅助核对完整冰皮的颜色与材质体系；不继承可见微纹。
+- `assets/shell-color-surface-v3.png`：用户在 2026-08-15 指定替换到 03 位的内部测试图。只可研究双手拉开时内馅的大块软褶、黏稠附着和受力方向；禁止把它当作冰皮颜色、完整皮面、产品轮廓、静态终点或正式批准母版。其过曝黄光、黄色皮层、手套、背景包装、长距离拉伸和体积增长均禁止继承；若这些缺陷会污染生成，完全不附图。
 - `assets/torn-edge-only.png`：仅参考圆钝、柔软、厚薄略变、向内弯曲贴馅的断边；不参考内馅、木桌、比例和光线。
-- `assets/visual-mother-v2.png`、`visual-mother-v4.png`、`visual-mother-v5.png`：仅参考对应状态的自然视觉分量、人物/双手构图、暖调生活感与食欲感；不继承微纹、错误断边、错误内馅或尺寸。
-- `assets/test-passed-cross-section-material-v4.png`：可作为破损状态的内馅材质专用输入，只参考干净暖金黄、连续浓稠果泥与宽大自然起伏；不得继承盘子、食指、尺寸、构图、机位、光线、外轮廓和白边。仍不表示 v8 或整套已正式批准。
+- `assets/visual-mother-v4.png`、`visual-mother-v5.png`：仅参考对应状态的自然视觉分量、双手构图、暖调生活感与食欲感；不继承微纹、错误断边、错误内馅或尺寸。
 - `assets/user-stretch-sequence-01.png` 至 `04.png`：用户提供的连续动作参考，只用于双手受力方向、渐进分离和软性形变时序；其中黄色外皮、超长条状拉伸、手套、托盘、背景小产品和体积增长全部禁止继承。静态 V3 默认最多附 01–02，03–04 只用于视频时序分析。
+- `assets/v3-user-reference-01-thumb-pressure.png`：V3 `pressed` 阶段参考，只借鉴双拇指对称施压、中央宽软凹陷和初始受力关系；不继承手套、金属架、背景产品、尺寸、光线或已露馅结果。
+- `assets/v3-user-reference-03-opening-seed.png`：V3 最早期 `opening_window` 的极小开口种子参考；不继承封闭规则孔洞、扁平大号椭圆、手和指甲、托盘、背景或尺寸。
+- `assets/v3-user-reference-02-opening-window.png`：V3 已建立的较大 `opening_window` 参考；不得用于 `pre_break`，不得继承菱形封闭孔、扁平大号椭圆、手和指甲、托盘、背景或尺寸。
+- `assets/filling-neutral-light-reference.png`：用户指定的中性光线内馅参考，只校准中性曝光下的明暗、色温与宽大连续软褶；不继承孔洞/空腔、开口几何、手、产品尺寸、背景或偏浅最终颜色，最终内馅仍服从暖金黄 90% 连续果泥加 10% 稀疏软纤维规范。
+- `assets/approved-opened-display-texture-v5.png`：用户在 2026-08-16 明确批准的掰开展示质感案例。V5 `early_cohesive_opening`、`two_halves_display` 或 V4 `hand_torn` 需要质感校准时，只参考暖米白粉感冰皮、暖金黄浓稠满馅，以及柔软圆钝、厚薄自然、向内贴馅的断裂边缘；不把单颗落桌开口构图当作双手两半母版，不继承木桌、麻布、榴莲、茶具、背景、产品尺寸、开口轮廓或底部灰透薄皮。
+
+静态 V3 只附与当前唯一终点匹配的一张形态参考：`pressed` 用 01，极小 `opening_window` 用 03，较大 `opening_window` 用 02；不得把 01–03 全部同时附上。01–03 均不构成合格 `pre_break` 参考。
 
 若参考图的缺陷会强烈污染目标属性，不附该图，只使用文字规范。
 

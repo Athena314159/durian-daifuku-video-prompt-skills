@@ -159,7 +159,11 @@ S001｜“对应口播核心内容”
 - 每个镜头第一条动作时间从 `0.00秒` 开始；
 - 每镜通常 2–3 句台词，动作逻辑优先；
 - 较长单句原则上约 50 个汉字；
-- Prompt 主体不超过 4000 个非空白字符；
+- 完整编译的 Prompt 主体必须为3000–4000个非空白字符；默认压在3000–3300安全区，避免复制区标签、换行或平台计数差异造成超限；
+- 由人物、手部或人物声音推进的镜头，六层表演及其可观察动作必须占 Prompt 主体非空白字符的 40%–50%；只统计绑定本镜时间段、触发和反应的专属内容，不统计身份锁、产品/摄影约束、通用负面词或跨镜复用模板；
+- 导出时逐镜记录表演字符数、Prompt 主体字符数和表演占比；程序比例通过不能替代逐动作段六层内容审核；
+- 字符数按去除全部空白后的 Prompt 主体计算，标题标注必须与程序实算一致；
+- 不得以复制句子、同义反复、无关排除词或虚构不可观察细节凑长度；Prompt复制区只保留生成可执行内容，原片证据解释、审核过程、版本说明和统计方法全部放在复制区外；
 - 产品形态只写中文，不写 `V1–V5`、`whole`、`bitten`、`person_eating` 等内部标签；
 - 用户交付不使用 `PASS`、`FAIL`、`ERROR` 冒充内容审核结论；
 - `【原片动作对应】` 要写动作事实和时间映射，不能只写“已覆盖”；
@@ -208,13 +212,30 @@ S001｜标题
 - `RESOURCE_OCCUPANCY_CONFLICT`：手、嘴、产品或道具互斥占用。
 - `PRODUCT_STATE_INVALID`：状态跳步、互斥或物理不成立。
 - `PRODUCT_COUNT_MISMATCH`：产品数量不守恒。
+- `PLATE_LAYOUT_MISMATCH`：盘中产品虽然数量可能相同，但逐根中心位置、方向、上下层级、交叉点、露出端、遮挡比例或盘沿关系没有继承批准首帧，或被重排成整齐阵列。
+- `PRODUCT_DIMENSION_MISMATCH`：黄油脆丝棒未保持用户确认的约 12 厘米长度，或同距离下没有保持约为 15 厘米盒宽 80% 的关系。
+- `PACKAGE_DIMENSION_MISMATCH`：外盒未保持约 15×15×4.5 厘米的方形正面与浅厚度，或相对人物、产品、盘子的尺度异常。
 - `FIRST_FRAME_CONFLICT`：生成首帧与 Prompt 起始状态冲突。
+- `FACE_IDENTITY_NOT_TRANSFERRED`：目标成年人物身份不可辨认，结果仍接近原人物或只改变妆容。
+- `HEAD_BODY_SCALE_MISMATCH`：头部相对肩宽、躯干、手掌或原构图明显过小/过大。
+- `FACE_BODY_FUSION_ARTIFACT`：出现面具感、贴头感、发际线/耳朵/颈肩断裂或肤色纹理不连续。
+- `CASCADING_IMAGE_EDIT`：在上一轮失败生成图上叠修，存在累积污染风险。
+- `MOUTH_PRODUCT_CONTACT_BROKEN`：吃食镜头的嘴唇、牙齿、手指和产品接触链被破坏。
+- `NON_TARGET_PERSON_CHANGED`：小孩或其他非目标人物的脸、发型、年龄、衣服或身份发生变化。
+- `APPROVED_FRAME_NOT_REINSERTED`：修复图未按 S 编号回填逐镜目录，或总览/索引仍引用旧图。
 - `PRODUCT_SPEC_STALE`：沿用过时或已否决产品规则。
 - `PRODUCT_STATE_LABEL_NOT_CHINESE`：用户 TXT 使用内部英文或字母状态。
-- `PROMPT_TOO_LONG`：主体超过 4000 个非空白字符。
+- `PROMPT_TOO_SHORT`：完整编译主体少于3000个非空白字符。
+- `PROMPT_TOO_LONG`：完整编译主体超过4000个非空白字符，或项目已锁定更小上限却仍超过该上限。
+- `PROMPT_COPY_REGION_CONTAMINATED`：即梦复制区混入原片证据解释、审核过程、版本说明、统计方法或与本镜无关的跨镜知识。
+- `PROMPT_CHAR_COUNT_MISMATCH`：标题标注的主体字符数与程序实算不一致。
+- `PROMPT_PADDING_DETECTED`：出现明显复制、同义堆叠或与本镜无关的长度填充。
+- `DOC_PROMPT_SOURCE_DIVERGENCE`：Word 没有逐镜使用已校验 TXT 正文，或图片、台词、字符数与事实源不一致。
+- `DOC_RENDER_NOT_VERIFIED`：DOCX 未渲染并逐页检查版式、中文字体、图片和截断。
 - `GENERATION_TIME_NOT_ZERO`：镜内时间未从 0.00 秒开始。
 - `NO_TEXT_RULE_MISSING`：缺无字幕无水印规则。
 - `PERFORMANCE_DETAIL_MISSING`：缺视线、五官、身体/手部、呼吸/停顿或声音细节。
+- `PERFORMANCE_SHARE_OUT_OF_RANGE`：六层表演及其可观察动作占 Prompt 主体少于 40% 或超过 50%，或统计口径混入身份锁、产品/摄影约束和通用模板。
 - `ACCENT_PLAN_MISSING`：有口播却没有具体可执行的口音与讲话方案。
 - `ACCENT_PROPOSAL_NOT_DISCLOSED`：原声证据不足时提出了口音方案，却没有在对话中说明它属于创作提案。
 - `GENERIC_SPEECH_PLACEHOLDER`：使用“沿用原片生活口语节奏”等泛化占位表达。

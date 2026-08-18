@@ -1,4 +1,4 @@
 interface:
   display_name: "即梦视频改款导演"
-  short_description: "联合字幕与原片规划声音、分镜、首帧、节奏和知识库 Prompt"
-  default_prompt: "使用 $jimeng-video-remix-director 联合分析原视频与我提供的字幕稿，先给出声音策略、视频逻辑和短分镜确认卡。"
+  short_description: "规划即梦分镜并审核首帧、产品结构与生成结果"
+  default_prompt: "使用 $jimeng-video-remix-director 分析原视频和字幕，按目标产品知识库规划分镜、审核首帧，并在我提供生成结果后定位差异返工。"

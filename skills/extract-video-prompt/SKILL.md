@@ -1,6 +1,6 @@
 ---
 name: extract-video-prompt
-description: Analyze a user-supplied source video, hand off its original spoken script and visible subtitles for user revision, lock every speaker's identity and on-screen/off-screen position, then reproduce source actions and detailed human performance in Jimeng-ready shot prompts while inserting a physically consistent durian daifuku. Invoke whenever the user says “提取视频prompt skill”, “调用大福的拆视频skill”, “大福拆视频”, “提取视频prompt”, “换成榴莲大福逐分镜”, or gives equivalent video-remake instructions. Also use when a video attachment has clear durian-daifuku/video-prompt intent. If the user has not returned a revised script, deliver the editable original transcript first and continue only source analysis. If ordinary summarization or transcription may be intended, ask before invoking.
+description: Analyze a user-supplied source video, hand off its original spoken script and visible subtitles for revision, lock every speaker's identity and on-screen/off-screen position, then reproduce source actions and detailed human performance in Jimeng-ready shot prompts while replacing the product with a physically consistent approved target such as a durian daifuku or 达尔顿黄油脆丝棒. Also diagnose and recover face-edit, first-frame, prompt-length, storyboard reinsertion, and Word-delivery failures in the same remake workflow. Invoke for “提取视频prompt”, “大福拆视频”, “黄油脆丝棒视频改款”, “换产品逐分镜”, “换脸返工”, “Prompt 字数接不上”, “重新生成即梦 Word” or equivalent source-video remake instructions. If the user has not returned a revised script, deliver the editable original transcript first and continue only source analysis. If ordinary summarization or transcription may be intended, ask before invoking.
 ---
 
 # 提取视频prompt skill
@@ -11,8 +11,11 @@ description: Analyze a user-supplied source video, hand off its original spoken 
 
 - 完整任务使用当前 `$jimeng-video-remix-director` 作为项目与首帧底座。
 - 任一镜头出现榴莲大福时，读取当前 `$durian-daifuku-five-states` 的产品规格、参考图角色和所需视频状态链。
+- 目标产品为黄油脆丝棒时，完整读取 [references/products/butter-crisp-stick.md](references/products/butter-crisp-stick.md)，并按其资产路由查看实际像素；不要读取或注入榴莲大福状态。
+- 目标产品是其他食品时，先查看用户参考图并建立项目级临时规格；未获用户明确要求前，不把临时规格写回 Skill 知识库。
 - 进入角色识别、表演细化或内容审核时，完整读取 [references/semantic-role-performance-gate.md](references/semantic-role-performance-gate.md)。
 - 编译和导出时读取 [references/output-contract.md](references/output-contract.md)。
+- 用户反馈“脸没换过来、像把头装在身体上、头太小、越改越脏、改好后放回分镜、Prompt 不足 3000 字、Word 与 TXT 接不上”或同类症状时，完整读取 [references/remake-recovery-playbook.md](references/remake-recovery-playbook.md)，先归类根因再返工。
 
 不要把待审核产品规范称为正式批准版。内部可以使用状态编号做路由，用户交付中的“产品形态”必须使用中文。
 
@@ -111,7 +114,9 @@ description: Analyze a user-supplied source video, hand off its original spoken 
 - 承重手、操作手、递物手；
 - 说话、张嘴、咬食、闭口咀嚼、吞咽；
 - 同一颗产品的位置、数量、破损状态；
+- 盘装产品逐根实例的中心位置、长轴方向、上下层级、交叉点、露出端、遮挡比例和盘沿关系；
 - 包装、手机、餐具、卡片等道具占用；
+- 黄油脆丝棒外盒的 `15 × 15 × 4.5 cm` 三轴比例、同框多盒同尺寸和接触阴影；
 - 前置动作是否完成后才出现后续结果。
 
 不要限制不冲突的动作数量。只有资源互斥、因果跳步或时间无法执行时拆镜。
@@ -139,6 +144,14 @@ description: Analyze a user-supplied source video, hand off its original spoken 
 5. **呼吸与停顿**：吸气、呼气、换气、欲言又止、四分之一秒或半拍停顿。
 6. **声音与口语**：音色、音量、语速、起音、重音、尾音、笑意、连读、口语化和口音证据。
 
+### 六层表演占比硬门
+
+- 完整编译阶段，只要镜头由可见人物、可见手部或人物声音推进叙事，六层表演及其可观察动作必须占 Prompt 主体非空白字符的 **40%–50%**；少于 40% 表示人物被产品/技术约束淹没，超过 50% 表示可能挤压产品物理、手口道具、摄影与连续性事实，均不得交付。
+- 计入占比的内容必须绑定本镜具体时间段、触发原因和可见反应，包括情绪、视线、五官、身体/手部准备、呼吸/停顿、声音/口语以及这些层之间的因果。身份锁、头身比例、产品尺寸、包装文字、摄影参数、通用负面词和跨镜复用的原则模板不得计入。
+- 每个动作段仍须逐段覆盖全部适用层，不能只在镜头开头集中写一次六层词汇，也不能复制同一段通用“活人感模板”来凑到 40%。镜头专属六层内容应当是占比统计的主体。
+- 无可辨认正脸的手部镜头不得虚构视线或五官；把不可观察层标为“不适用”，用手部意图、受力准备、动作节奏、停顿、画外音与声画反馈补足人物驱动内容，整体占比仍按 40%–50% 审核。
+- 在导出总 TXT、逐镜 TXT 和 Word 前，程序必须按镜输出 `表演字符数 / Prompt 主体字符数 / 表演占比`。结构脚本只能报告比例，内容审核仍须确认这些字符确实属于本镜可执行的六层表演。
+
 把口音与讲话风格分成两种来源：
 
 - **原声观察**：原片有人声且能辨认时，根据音高、语速、平翘舌、前后鼻音、卷舌、语气词、连读、吞音和地域倾向写具体观察。
@@ -162,7 +175,11 @@ description: Analyze a user-supplied source video, hand off its original spoken 
 
 场景同时写清空间、生活物件、光线、环境声、手机持握和对焦反应。保留真实小失误、重复起音和调整动作，但不把活人感写成低画质或失控表演。
 
-## 8. 榴莲大福协同
+## 8. 产品替换协同
+
+先按用户明确目标选择且只选择一个产品规范。不同产品的形态、状态、包装、断面、掉屑和吃法不得互相继承。
+
+### 榴莲大福
 
 按当前五形态 Skill 内部路由选择状态；只注入本镜需要的规则。
 
@@ -176,18 +193,46 @@ description: Analyze a user-supplied source video, hand off its original spoken 
 
 不得在用户 TXT 的“产品形态”字段使用 `V1–V5`、`whole`、`bitten`、`person_eating` 等内部标签。
 
+### 黄油脆丝棒
+
+按 `references/products/butter-crisp-stick.md` 选择本镜所需的完整体、包装、开袋、掰断、断面、咬食或碎屑规则；用户交付只写中文产品状态。涉及课堂分享时，只有用户明确授权才新增教室场景，并锁定儿童数量、粉色书包、递接手、独立包装数量和合法咬食链。
+
+黄油脆丝棒的实体片状脆丝覆盖层、橙金色、直挺脆硬、同色疏松断面和少量局部碎屑是产品不变量。脆丝必须是有独立厚度、遮挡、缝隙、微投影和轮廓凸出的实体碎片，不是光滑橙色棒体上的贴图、印刷图案、划痕、浅浮雕、压花或均匀卷曲细线。禁止把它生成成面包糠炸物、肉松、椰蓉、威化、软面包、流心或拉丝食品。
+
 ## 9. 包装与用户参考图
 
 先查看实际像素，再声明参考图只承担什么、禁止继承什么。
 
-包装外观、文字、结构、尺寸、盒数、单盒装量未确认时不得臆造。用户确认实体包装印刷后，将它列为无字幕规则的明确例外；参考图水印、手套、背景和拍摄构图不自动继承。
+### 尺度模式：只能选择一种
+
+每次涉及产品或包装尺寸的生成、编辑与 QA，先在生成包中声明且只声明一个 `scale_mode`：
+
+- `physical_consistency`：默认模式。按实体事实锁定盒体 `15 × 15 × 4.5 cm`、单根 12 cm、同平面物理比 `0.80`，并结合透视审核。
+- `relative_pixel_resize`：仅当用户明确要求“基于某张原图缩小/放大百分比”时启用。把用户指定的原始批准帧设为唯一尺寸基准，以线性宽高倍率描述对象，例如盒子缩小 20% 写为 `0.80`、脆丝棒缩小 10% 写为 `0.90`；面积倍率不得冒充线性倍率。
+
+两种模式互斥。启用 `relative_pixel_resize` 时，`15 cm`、`12 cm` 和 `0.80` 只保留为产品元数据，不得再写进本轮生图硬约束或作为画面投影尺寸验收值；不得同时要求“相对原图缩放百分比”和“按其他镜头/实体比例校正画面大小”。其他镜头只能承担身份、材质、形状、包装印刷或结构职责，绝不能承担当前镜头的视觉尺寸职责。用户最新的明确尺寸指令覆盖旧轮次与项目默认值。
+
+百分比返工必须记录：唯一源帧、每类对象的原始边界框、目标线性倍率、保持 `1.00` 的不变量和结果边界框。只有执行了确定性的蒙版几何变换并完成像素测量，才能声称“精确缩小 X%”；纯生成式编辑只能写“目标倍率约为 X”，并须因明显过缩、欠缩、镜头缩放、人物比例变化或物体拓扑改变而拒收，禁止伪报精确百分比。
+
+包装外观、文字、结构、尺寸、盒数、单盒装量未确认时不得臆造。黄油脆丝棒零售外盒已由用户明确确认为 `15 × 15 × 4.5 cm`，所有出现该外盒的镜头必须继承 1:1 正方形正面和约 0.3 边长的盒厚；不得退回“尺寸未确认”或只写“橙色方盒”。用户确认实体包装印刷后，将它列为无字幕规则的明确例外；参考图水印、手套、背景和拍摄构图不自动继承。
+
+`产品形态` 必须枚举首帧和镜内实际可见的全部产品与包装状态，不能只写盘中裸产品却漏掉画面里的外盒。若批准首帧出现一盒、两盒或三盒，而 `产品形态` 和本镜专项 Prompt 没有相同盒数、尺寸和状态，先修正事实表，禁止依赖通用“包装与文字边界”段落蒙混通过。
+
+黄油脆丝棒出现裸产品时，`细节.jpg` 必须承担实体片状表面结构职责。首帧生成包必须实际绑定该参考资产，不能只在文字中写“产品知识库负责”。若图生视频平台只允许上传一张首帧，先把批准首帧中的产品按 `细节.jpg` 修到合格，再进入视频；不得指望视频 Prompt 从错误首帧恢复材料结构。
+
+批准首帧前，把每个裸产品裁成原尺寸局部，与 `细节.jpg` 同尺度并排查看。必须同时看见片状碎片顶面、侧边厚度、前后遮挡、翘边、窄缝、微投影和少量轮廓凸出；任一产品变成光滑基底上的图案、浅浮雕或细线纹，均不得标记为批准首帧。
 
 ## 10. 分镜与时间
 
 - 依据原片硬切、动作闭环、说话人、声音方式、产品状态、台词语义和平台时长切镜。
 - 通常每镜 2–3 句；动作逻辑优先。
 - 长句原则上约 50 个汉字，在自然停顿处分句，不改变原意。
-- 每镜 Prompt 主体不超过 4000 个非空白字符。
+- 完整编译阶段每镜 Prompt 主体必须为 3000–4000 个非空白字符；为避免实际粘贴区因换行、标签或平台计数差异超限，默认把正文压在 3000–3300 的安全区，除非用户明确要求更长。
+- 只有真正发送给生成模型的可执行内容进入 Prompt 主体：首帧/身份、镜内时间动作、人物六层、手嘴道具占用、产品关键物理、摄影声音和必要禁止项。原片证据解释、审核过程、版本说明、统计方法、参考职责说明和跨镜重复知识不得混入复制区。
+- Word 中“即梦可复制 Prompt”必须是一个边界清楚的独立区域；口播、原片证据、审核记录和字符统计放在区域外，不能让用户复制整页时误带入。
+- 把长度用于补齐原片动作映射、活人感六层、手口道具占用、产品物理、摄影灯光和声音；禁止复制句子、同义反复、罗列与本镜无关的负面词或虚构不可观察细节凑字数。
+- 字符数按去除全部空白后的 Prompt 主体计算，不包含标题、元数据、口播稿、原片证据和审核记录；导出标题中的字符数必须与程序实算一致。
+- 压缩顺序：先删除跨镜通用解释、证据说明和同义排除词，再合并摄影与连续性，最后压缩重复技术句；不得先删除人物触发、动作因果、产品关键物理或嘴手资源冲突。表演占比按用户锁定范围对最终复制稿复算。
 - 保存原片绝对时间；每个独立生成镜头从 `0.00秒` 重算。
 - 标题优先使用本镜口播核心；无口播时用简短动作摘要。
 
@@ -255,9 +300,22 @@ description: Analyze a user-supplied source video, hand off its original spoken 
 - 活人感六层；
 - 手口与道具占用；
 - 产品状态或数量；
+- 产品实体微结构；
 - 首帧；
 - 文字和水印；
 - 时长和字符数。
+
+遇到首帧换脸、分镜回填或 Word 交付故障时，按 [references/remake-recovery-playbook.md](references/remake-recovery-playbook.md) 的恢复顺序执行。必须遵守：
+
+1. 把用户主观反馈转换成可观察症状，不直接把“重做”当根因；
+2. 对照当前已审核原始单帧、目标身份参考和失败图，分别判断身份、头身比例、颈肩融合、手嘴产品关系与画质污染；
+3. 每个失败镜从对应已审核原始单帧重新生成，不在失败生成图上叠修；
+4. 为自然融合可以扩大编辑区域到头发、颈部、肩线、上半身或姿势，但不得改变用户已锁定的小孩、产品、包装数量、杯子、场景和构图事实；
+5. 只替换失败的 S 编号，回填逐镜目录后重建分镜总览，再由总 TXT 的已校验正文生成 Word；
+6. Word 不得从摘要、聊天记录或短分镜卡重新扩写。它必须逐镜嵌入已通过校验的总 TXT/逐镜 TXT 正文，并显示程序实算字符数；
+7. 图像逐张像素检查，DOCX 渲染后逐页检查；没有完成这两类检查不得称为最终交付。
+
+黄油脆丝棒出现 `PRODUCT_MICROSTRUCTURE_FLATTENED` 时，所谓“已审核原始单帧”不能继续作为产品事实源。场景、人物和构图仍回到该原始单帧；产品结构必须重新绑定 `细节.jpg`，从原场景底图单次重做。换脸或整个人物融合若扩大编辑区域，裸产品、盘中产品和包装产品图默认列为像素保护区；无法保护时必须同时提供产品结构参考并重新执行产品局部 QA。
 
 ## 14. 最终阻断条件
 
@@ -269,13 +327,32 @@ description: Analyze a user-supplied source video, hand off its original spoken 
 - 全程镜外人物被安排出镜；
 - 原片主要动作没有对应；
 - 活人感六层缺失或只写抽象情绪词；
+- 六层表演及其可观察动作少于 Prompt 主体的 40% 或超过 50%，或以身份锁、产品/摄影约束、通用模板冒充表演字符；
 - 没有具体口音与讲话风格方案，或只使用泛化占位表达；
 - 原声证据不足时，没有在对话中说明方案属于创作提案；
 - 台词卖点没有视觉证据；
 - 手口、产品或道具互斥占用；
 - 产品状态跳步、数量不守恒或沿用旧规范；
+- 盘中产品只守住数量却没有继承批准首帧的逐根陈列拓扑，或被重排成整齐阵列；
+- 未声明唯一 `scale_mode`，或把 `physical_consistency` 与 `relative_pixel_resize` 同时写入同一次生成，触发 `SCALE_MODE_COLLISION`；
+- `physical_consistency` 模式下，黄油脆丝棒外盒没有继承 `15 × 15 × 4.5 cm`、1:1 正方形正面和约 0.3 边长盒厚，或同框多盒尺寸/厚度不一致；
+- `physical_consistency` 模式下，黄油脆丝棒单根 12 cm 与盒面 15 cm 边长的物理比例没有通过透视校正后的联合审核；同平面、可比朝向时投影比应约为 `0.80`，跨景深时不得用裸像素比误判；
+- `relative_pixel_resize` 模式下没有记录唯一源帧、原始边界框、目标线性倍率、`1.00` 不变量与结果边界框，或让其他镜头承担当前镜头视觉尺寸；
+- 纯生成式编辑未经测量却宣称精确完成百分比缩放，或结果出现明显过缩、欠缩、整镜缩放、人物/盘子/独立袋比例漂移；
+- 包装尺寸、单根长度、实体片状微结构和盘中拓扑没有在同一结果中联合通过，或修正其中一项导致另一项回退；
+- 批准首帧可见黄油脆丝棒外盒，但 `产品形态` 或本镜专项 Prompt 漏写盒数、尺寸或状态；
+- 黄油脆丝棒变成光滑橙色基底上的贴图、印刷纹、划痕、浅浮雕、压花、均匀卷曲细线或其他非实体片状覆盖层；
+- 裸产品尚未用原尺寸局部与 `细节.jpg` 同尺度并排检查，或图生视频尚未检查运动中的微结构保持；
 - 产品形态仍用内部英文/字母标签；
+- 成年人物目标身份没有明显转移，仍接近原人物；
+- 头部相对肩宽、躯干或原构图明显过小/过大，或出现面具感、贴头感、颈肩断裂；
+- 在上一轮失败生成图上继续叠修，导致纹理、皮肤、包装文字或背景逐轮污染；
+- 吃食镜头的嘴唇、牙齿、手指与产品接触关系被换脸破坏；
+- 修好的镜头没有按 S 编号回填逐镜目录并重建分镜总览；
+- 完整编译阶段每镜少于 3000 个非空白字符，或以重复、无关约束和虚构细节凑长度；
 - 每镜超过 4000 个非空白字符；
+- Word 正文不是来自已经校验的总 TXT/逐镜 TXT，或 Word 标注字数与实际 Prompt 不一致；
+- DOCX 尚未渲染并逐页检查；
 - 镜内时间未从 0.00 秒开始；
 - 缺总 TXT、逐镜 TXT、角色锁定表或内容语义审核报告；
 - 把结构脚本结果描述成内容审核结论。
