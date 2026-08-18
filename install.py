@@ -11,6 +11,12 @@ from pathlib import Path
 
 
 SKILLS = (
+    "extract-skill",
+    "director-skill",
+    "product-skill",
+)
+
+LEGACY_SKILLS = (
     "extract-video-prompt",
     "jimeng-video-remix-director",
     "durian-daifuku-five-states",
@@ -40,20 +46,19 @@ def main() -> int:
         print(f"安装包不完整，缺少：{', '.join(missing)}", file=sys.stderr)
         return 2
 
-    existing = [name for name in SKILLS if (target_root / name).exists()]
+    existing = [target_root / name for name in (*SKILLS, *LEGACY_SKILLS) if (target_root / name).exists()]
     if existing and not args.force:
         print("检测到同名 Skill，未进行任何复制：", file=sys.stderr)
-        for name in existing:
-            print(f"- {target_root / name}", file=sys.stderr)
+        for destination in existing:
+            print(f"- {destination}", file=sys.stderr)
         print("确认升级请重新执行并添加 --force。", file=sys.stderr)
         return 1
 
     target_root.mkdir(parents=True, exist_ok=True)
     backups: list[tuple[Path, Path]] = []
     try:
-        for name in existing:
-            destination = target_root / name
-            backup = target_root / f".{name}.pre-install-backup"
+        for destination in existing:
+            backup = target_root / f".{destination.name}.pre-install-backup"
             if backup.exists():
                 print(f"已有备份目录，无法安全覆盖：{backup}", file=sys.stderr)
                 return 1

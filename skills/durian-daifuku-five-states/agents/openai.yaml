@@ -1,4 +1,0 @@
-interface:
-  display_name: "榴莲大福主体替换与五形态"
-  short_description: "把图片主体食品换成七厘米榴莲大福，并生成验收五形态与视频动作"
-  default_prompt: "使用 $durian-daifuku-five-states 把我图片中的主体食品替换为符合当前动作的约7厘米榴莲大福，并锁定人物、手、场景、构图和光线。"

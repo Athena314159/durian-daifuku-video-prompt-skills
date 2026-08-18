@@ -1,5 +1,5 @@
 ---
-name: durian-daifuku-five-states
+name: product-skill
 description: Replace the main food product in an existing image with a physically consistent approximately 7 cm durian daifuku, or generate, edit, and validate its five product states and video transitions. Use when Codex needs to 换主体、换食品、把原产品换成榴莲大福、改图、生成榴莲大福图片、人物吃大福、双手撕大福、横截面、两半满馅、即梦视频 Prompt、跨人物跨场景产品一致性、中文生图 Prompt、参考图角色控制或严格像素 QA.
 ---
 

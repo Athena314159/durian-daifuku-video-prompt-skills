@@ -1,0 +1,4 @@
+interface:
+  display_name: "提取skill"
+  short_description: "复刻原片并锁定人物、产品结构、包装尺寸和交付"
+  default_prompt: "使用 $extract-skill 提取并复刻原视频；按目标产品像素锁定材质与包装尺寸，并诊断换脸、首帧、Prompt、分镜回填和 Word 断层。"

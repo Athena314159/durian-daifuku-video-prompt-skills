@@ -1,5 +1,5 @@
 ---
-name: extract-video-prompt
+name: extract-skill
 description: Analyze a user-supplied source video, hand off its original spoken script and visible subtitles for revision, lock every speaker's identity and on-screen/off-screen position, then reproduce source actions and detailed human performance in Jimeng-ready shot prompts while replacing the product with a physically consistent approved target such as a durian daifuku or 达尔顿黄油脆丝棒. Also diagnose and recover face-edit, first-frame, prompt-length, storyboard reinsertion, and Word-delivery failures in the same remake workflow. Invoke for “提取视频prompt”, “大福拆视频”, “黄油脆丝棒视频改款”, “换产品逐分镜”, “换脸返工”, “Prompt 字数接不上”, “重新生成即梦 Word” or equivalent source-video remake instructions. If the user has not returned a revised script, deliver the editable original transcript first and continue only source analysis. If ordinary summarization or transcription may be intended, ask before invoking.
 ---
 
@@ -9,8 +9,8 @@ description: Analyze a user-supplied source video, hand off its original spoken 
 
 ## 必读路由
 
-- 完整任务使用当前 `$jimeng-video-remix-director` 作为项目与首帧底座。
-- 任一镜头出现榴莲大福时，读取当前 `$durian-daifuku-five-states` 的产品规格、参考图角色和所需视频状态链。
+- 完整任务使用当前 `$director-skill` 作为项目与首帧底座。
+- 任一镜头出现榴莲大福时，读取当前 `$product-skill` 的产品规格、参考图角色和所需视频状态链。
 - 目标产品为黄油脆丝棒时，完整读取 [references/products/butter-crisp-stick.md](references/products/butter-crisp-stick.md)，并按其资产路由查看实际像素；不要读取或注入榴莲大福状态。
 - 目标产品是其他食品时，先查看用户参考图并建立项目级临时规格；未获用户明确要求前，不把临时规格写回 Skill 知识库。
 - 进入角色识别、表演细化或内容审核时，完整读取 [references/semantic-role-performance-gate.md](references/semantic-role-performance-gate.md)。

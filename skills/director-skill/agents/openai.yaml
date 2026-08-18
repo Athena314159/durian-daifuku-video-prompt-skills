@@ -1,0 +1,4 @@
+interface:
+  display_name: "导演skill"
+  short_description: "规划即梦分镜并审核首帧、产品结构与生成结果"
+  default_prompt: "使用 $director-skill 分析原视频和字幕，按目标产品知识库规划分镜、审核首帧，并在我提供生成结果后定位差异返工。"

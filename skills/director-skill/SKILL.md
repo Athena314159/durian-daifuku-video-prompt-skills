@@ -1,5 +1,5 @@
 ---
-name: jimeng-video-remix-director
+name: director-skill
 description: >-
   Build and operate a persistent commercial workflow for Jimeng short-video adaptation, including source-video and subtitle analysis, voice-over/on-screen speech/silence decisions, story logic and pacing, shot and action-beat splitting, exact temporal first frames kept separate from beauty keyframes, product replacement using the selected product-specific bible such as durian daifuku or 达尔顿黄油脆丝棒, prompt compilation, approved-first-frame validation, supplied-Jimeng-result review, failed product geometry or texture recovery, and avatar asset management. Use for 即梦/Jimeng UGC、原视频复刻、字幕稿匹配、逐镜首帧、换产品、黄油脆丝棒、包装尺寸、产品材质走样、改图、Prompt 拆解、生成结果审核或本地视频工作台流程。
 ---
@@ -16,7 +16,7 @@ description: >-
 2. 用户提供的字幕稿。
 3. 目标产品参考图或已批准的对应产品库条目。
 
-缺少字幕稿时可以提取素材和分析原片，但不要决定人物讲话/画外音比例，也不要编译最终 Prompt。每个项目只选择一个产品规范；目标为黄油脆丝棒时，使用 `$extract-video-prompt` 的 `references/products/butter-crisp-stick.md` 与实际资产，不得注入榴莲大福物理。
+缺少字幕稿时可以提取素材和分析原片，但不要决定人物讲话/画外音比例，也不要编译最终 Prompt。每个项目只选择一个产品规范；目标为黄油脆丝棒时，使用 `$extract-skill` 的 `references/products/butter-crisp-stick.md` 与实际资产，不得注入榴莲大福物理。
 
 ## 核心边界
 
