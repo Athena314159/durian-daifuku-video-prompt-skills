@@ -1,4 +1,4 @@
 interface:
-  display_name: "导演skill"
-  short_description: "规划即梦分镜并审核首帧、产品结构与生成结果"
-  default_prompt: "使用 $director-skill 分析原视频和字幕，按目标产品知识库规划分镜、审核首帧，并在我提供生成结果后定位差异返工。"
+  display_name: "即梦视频复刻总控 Agent"
+  short_description: "用自然语言调度拆视频、换脸、换产品、图文对齐与 Word 交付"
+  default_prompt: "使用 $director-skill 接管当前即梦视频复刻任务；先判断我是在拆视频、换脸、换产品、对齐图文还是导出 Word，再只执行对应节点并从项目状态继续。"
