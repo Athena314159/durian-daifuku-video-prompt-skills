@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "project_id": null,
+  "current_stage": "intake",
+  "status": "in_progress",
+  "canonical_prompt_source": "prompts",
+  "completed_stages": [],
+  "blocked_by": [],
+  "next_allowed_actions": [
+    "import_source_video",
+    "record_subtitle_script",
+    "bind_product_profile"
+  ],
+  "skill_versions": {},
+  "updated_at": null
+}

@@ -6,6 +6,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
+import subprocess
 import sys
 import uuid
 from datetime import datetime
@@ -16,11 +18,13 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 REQUIRED_FILES = {
     "project": Path("project.json"),
     "product": Path("library/product_bible.json"),
+    "product_library": Path("library/product_library.json"),
     "style": Path("library/style_bible.json"),
     "corrections": Path("library/correction_memory.json"),
     "knowledge": Path("library/knowledge_index.json"),
     "avatars": Path("library/avatar_library.json"),
     "story": Path("planning/story_plan.json"),
+    "asset_reuse": Path("planning/asset_reuse_plan.json"),
     "source": Path("source/source_manifest.json"),
     "shots": Path("shots/shot_manifest.json"),
 }
@@ -70,6 +74,10 @@ def sha256_text(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
+def sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 def as_list(value: Any) -> List[Any]:
     if value is None:
         return []
@@ -80,6 +88,10 @@ def as_list(value: Any) -> List[Any]:
 
 def has_text(value: Any) -> bool:
     return isinstance(value, str) and bool(value.strip())
+
+
+def spoken_char_count(value: str) -> int:
+    return len(re.findall(r"[\u4e00-\u9fffA-Za-z0-9]", value))
 
 
 def flatten_text(values: Any) -> List[str]:
@@ -180,7 +192,13 @@ def validate_story_plan(story: Dict[str, Any], issues: List[Dict[str, Any]]) -> 
             add_issue(issues, "ERROR", "invalid_visual_mix_target", f"planning/story_plan.json.visual_mix_targets.{visual_type}", "min_ratio and max_ratio must define a valid 0-1 range.")
 
     pacing = story.get("pacing") or {}
-    for field in ("opening_hook_seconds", "maximum_single_shot_seconds"):
+    for field in (
+        "opening_hook_seconds",
+        "target_average_shot_seconds",
+        "maximum_single_shot_seconds",
+        "maximum_on_screen_chars_per_second",
+        "maximum_voiceover_chars_per_second",
+    ):
         value = pacing.get(field)
         if not isinstance(value, (int, float)) or value <= 0:
             add_issue(issues, "ERROR", "invalid_pacing_value", f"planning/story_plan.json.pacing.{field}", "Pacing values must be positive numbers.")
@@ -258,7 +276,7 @@ def validate_mix_and_pacing(story: Dict[str, Any], shots: List[Dict[str, Any]], 
         for shot in shots:
             duration = (shot.get("timecode") or {}).get("duration")
             if isinstance(duration, (int, float)) and duration > maximum:
-                add_issue(issues, "WARN", "shot_too_slow", f"shots/shot_manifest.json.{shot.get('id')}", f"Shot duration {duration}s exceeds the planned maximum {maximum}s; justify or tighten the rhythm.")
+                add_issue(issues, "ERROR", "shot_duration_exceeded", f"shots/shot_manifest.json.{shot.get('id')}", f"Shot duration {duration}s exceeds the planned maximum {maximum}s; split the semantic/action loop or record an explicit user override before compiling.")
     first = min(shots, key=lambda item: (item.get("timecode") or {}).get("start", float("inf")), default=None)
     if first and first.get("narrative_role") != "hook":
         add_issue(issues, "WARN", "opening_without_hook", f"shots/shot_manifest.json.{first.get('id')}.narrative_role", "The opening shot should normally perform the hook role.")
@@ -273,6 +291,7 @@ def validate_project(project_dir: Path, bundle: Dict[str, Dict[str, Any]], issue
     story = bundle["story"]
     knowledge = bundle["knowledge"]
     avatars = bundle["avatars"]
+    product_library = bundle["product_library"]
 
     for field in ("project_id", "project_name", "platform", "aspect_ratio", "generation_mode", "product_profile", "style_profile"):
         if not has_text(project.get(field)):
@@ -339,6 +358,11 @@ def validate_project(project_dir: Path, bundle: Dict[str, Dict[str, Any]], issue
         add_issue(issues, "ERROR", "invalid_knowledge_entries", "library/knowledge_index.json.entries", "entries must be a list.")
     if not isinstance(avatars.get("avatars"), list):
         add_issue(issues, "ERROR", "invalid_avatar_entries", "library/avatar_library.json.avatars", "avatars must be a list.")
+    product_entries = product_library.get("products")
+    if not isinstance(product_entries, list) or not product_entries:
+        add_issue(issues, "ERROR", "invalid_product_library", "library/product_library.json.products", "Products must contain the selected project product.")
+    elif not any(item.get("id") == project.get("product_profile") for item in product_entries if isinstance(item, dict)):
+        add_issue(issues, "ERROR", "selected_product_missing_from_library", "library/product_library.json.products", "The project product_profile must exist in product_library.json.")
 
     shot_items = shots.get("shots")
     if not isinstance(shot_items, list):
@@ -351,7 +375,7 @@ def validate_project(project_dir: Path, bundle: Dict[str, Dict[str, Any]], issue
     state_profiles = product.get("state_profiles") or {}
     seen_shot_ids = set()
     for index, shot in enumerate(shot_items):
-        validate_shot(project_dir, project, style, state_profiles, shot, index, seen_shot_ids, issues)
+        validate_shot(project_dir, project, style, state_profiles, story, shot, index, seen_shot_ids, issues)
 
     story_segments = story.get("segments") or []
     segment_ids = {segment.get("id") for segment in story_segments if isinstance(segment, dict) and has_text(segment.get("id"))}
@@ -391,6 +415,7 @@ def validate_shot(
     project: Dict[str, Any],
     style: Dict[str, Any],
     state_profiles: Dict[str, Any],
+    story: Dict[str, Any],
     shot: Any,
     index: int,
     seen_ids: set,
@@ -559,6 +584,36 @@ def validate_shot(
         if not any(term in timing for term in safe_terms):
             add_issue(issues, "ERROR", "speech_while_eating_risk", f"{base}.audio.speech_timing", "Eating shots may speak only before biting or after chewing/swallowing; never while chewing.")
 
+    if delivery_mode in {"voiceover", "on_screen_speech"}:
+        capacity = audio.get("speech_capacity") or {}
+        required_capacity = ("segment_count", "effective_characters", "speakable_seconds", "characters_per_second")
+        if any(capacity.get(field) is None for field in required_capacity):
+            add_issue(issues, "ERROR", "pacing_fields_missing", f"{base}.audio.speech_capacity", "Store segment_count, effective_characters, speakable_seconds and characters_per_second for every spoken shot.")
+        else:
+            segment_count = capacity.get("segment_count")
+            effective_chars = capacity.get("effective_characters")
+            speakable_seconds = capacity.get("speakable_seconds")
+            stated_rate = capacity.get("characters_per_second")
+            if not isinstance(segment_count, int) or segment_count < 1:
+                add_issue(issues, "ERROR", "pacing_fields_missing", f"{base}.audio.speech_capacity.segment_count", "segment_count must be a positive integer.")
+            elif segment_count > 3:
+                add_issue(issues, "ERROR", "script_segment_overload", f"{base}.audio.speech_capacity.segment_count", "A shot may contain at most three spoken segments; split by semantics and action loop.")
+            if not isinstance(effective_chars, int) or effective_chars < 1:
+                add_issue(issues, "ERROR", "pacing_fields_missing", f"{base}.audio.speech_capacity.effective_characters", "effective_characters must be a positive integer.")
+            elif effective_chars != spoken_char_count(str(audio.get("script_text", ""))):
+                add_issue(issues, "ERROR", "speech_capacity_mismatch", f"{base}.audio.speech_capacity.effective_characters", "Effective character count must equal Han/letter/digit characters in script_text.")
+            if not isinstance(speakable_seconds, (int, float)) or speakable_seconds <= 0:
+                add_issue(issues, "ERROR", "speech_window_invalid", f"{base}.audio.speech_capacity.speakable_seconds", "speakable_seconds must be positive and exclude biting, chewing, swallowing, required breaths, pure foley and silent observation.")
+            elif isinstance(effective_chars, int) and isinstance(stated_rate, (int, float)):
+                calculated_rate = effective_chars / float(speakable_seconds)
+                if abs(float(stated_rate) - calculated_rate) > 0.06:
+                    add_issue(issues, "ERROR", "speech_capacity_mismatch", f"{base}.audio.speech_capacity.characters_per_second", f"Stored rate {stated_rate} does not match {effective_chars}/{speakable_seconds}={calculated_rate:.2f}.")
+                pacing = story.get("pacing") or {}
+                limit_field = "maximum_on_screen_chars_per_second" if delivery_mode == "on_screen_speech" else "maximum_voiceover_chars_per_second"
+                limit = pacing.get(limit_field)
+                if isinstance(limit, (int, float)) and calculated_rate > float(limit) + 0.01:
+                    add_issue(issues, "ERROR", "speech_rate_exceeded", f"{base}.audio.speech_capacity.characters_per_second", f"Speech rate {calculated_rate:.2f} chars/s exceeds planned limit {float(limit):.2f}; split or extend instead of accelerating.")
+
     for field in ("hard_constraints", "prohibited", "continuity"):
         if not flatten_text(shot.get(field)):
             level = "ERROR" if field in {"hard_constraints", "prohibited"} else "WARN"
@@ -618,6 +673,27 @@ def lint_project(project_dir: Path, write_report: bool = True) -> Dict[str, Any]
         bundle = read_bundle(project_dir)
         project = bundle["project"]
         validate_project(project_dir, bundle, issues)
+        reuse_audit = subprocess.run(
+            [
+                sys.executable,
+                str(Path(__file__).resolve().parent / "audit_asset_reuse.py"),
+                "--plan",
+                str(project_dir / REQUIRED_FILES["asset_reuse"]),
+                "--stage",
+                "pre-generation",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if reuse_audit.returncode != 0:
+            add_issue(
+                issues,
+                "ERROR",
+                "asset_reuse_audit_blocked",
+                str(REQUIRED_FILES["asset_reuse"]),
+                (reuse_audit.stdout or reuse_audit.stderr).strip(),
+            )
 
     counts = {level: sum(issue["level"] == level for issue in issues) for level in ("ERROR", "BLOCK", "WARN")}
     report = {
@@ -894,9 +970,14 @@ def compile_project(project_dir: Path) -> Dict[str, Any]:
     entries = []
     for shot in bundle["shots"].get("shots") or []:
         markdown, metadata = compile_shot(bundle, shot)
-        write_text(prompt_dir / f"{shot.get('id')}.md", markdown)
+        prompt_path = prompt_dir / f"{shot.get('id')}.md"
+        write_text(prompt_path, markdown)
         write_text(history_dir / f"{shot.get('id')}.md", markdown)
-        metadata["prompt_sha256"] = sha256_text(markdown.rstrip() + "\n")
+        prompt_match = re.search(r"```text\s*\n(.*?)\n```", markdown, re.S)
+        if not prompt_match:
+            raise RuntimeError(f"Compiled prompt for {shot.get('id')} has no canonical text block.")
+        metadata["prompt_sha256"] = sha256_text(prompt_match.group(1).strip())
+        metadata["prompt_file_sha256"] = sha256_file(prompt_path)
         entries.append(metadata)
 
     source = bundle["source"]
@@ -918,11 +999,13 @@ def compile_project(project_dir: Path) -> Dict[str, Any]:
         "captured_at": now_iso(),
         "project": bundle["project"],
         "product_bible": bundle["product"],
+        "product_library": bundle["product_library"],
         "style_bible": bundle["style"],
         "correction_memory": bundle["corrections"],
         "knowledge_index": bundle["knowledge"],
         "avatar_library": bundle["avatars"],
         "story_plan": bundle["story"],
+        "asset_reuse_plan": bundle["asset_reuse"],
         "source_manifest": bundle["source"],
         "shot_manifest": bundle["shots"],
     }
@@ -936,6 +1019,18 @@ def compile_project(project_dir: Path) -> Dict[str, Any]:
         project["status"] = "prompt_ready"
     project["updated_at"] = now_iso()
     write_json(project_dir / "project.json", project)
+    workflow_path = project_dir / "planning" / "workflow_state.json"
+    if workflow_path.is_file():
+        workflow = load_json(workflow_path)
+        workflow["current_stage"] = "prompt_compile"
+        workflow["status"] = "in_progress"
+        workflow["blocked_by"] = []
+        workflow["next_allowed_actions"] = ["export_aligned_txt", "export_docx", "run_alignment_check"]
+        completed = workflow.setdefault("completed_stages", [])
+        if "first_frame_approval" not in completed:
+            completed.append("first_frame_approval")
+        workflow["updated_at"] = now_iso()
+        write_json(workflow_path, workflow)
     return {
         "shot_count": len(entries),
         "release_status": report.get("release_status"),

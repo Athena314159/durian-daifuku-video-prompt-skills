@@ -46,11 +46,40 @@ def migrate(project_dir: Path) -> Dict[str, Any]:
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, target)
 
-    for relative in ("planning/story_plan.json", "library/avatar_library.json", "library/knowledge_index.json"):
+    for relative in (
+        "planning/story_plan.json",
+        "planning/asset_reuse_plan.json",
+        "library/avatar_library.json",
+        "library/product_library.json",
+        "library/knowledge_index.json",
+    ):
         target = project_dir / relative
         if not target.exists():
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(TEMPLATE_DIR / relative, target)
+
+    product_library_path = project_dir / "library" / "product_library.json"
+    product_bible_path = project_dir / "library" / "product_bible.json"
+    if product_library_path.is_file() and product_bible_path.is_file():
+        product_library = load_json(product_library_path)
+        product_bible = load_json(product_bible_path)
+        profile_id = product_bible.get("profile_id") or "unknown-product"
+        if not product_library.get("products"):
+            product_library["products"] = [
+                {
+                    "id": profile_id,
+                    "name": product_bible.get("name", profile_id),
+                    "active": True,
+                    "rights_cleared": False,
+                    "usage_scope": "internal_test",
+                    "profile_path": "library/product_bible.json",
+                    "version": product_bible.get("version", 1),
+                    "states": sorted((product_bible.get("states") or {}).keys()),
+                    "reference_assets": [],
+                    "approved_result_assets": [],
+                }
+            ]
+            write_json(product_library_path, product_library)
 
     project_path = project_dir / "project.json"
     project = load_json(project_path)

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import shutil
@@ -40,6 +41,10 @@ def write_json(path: Path, data: Dict[str, Any]) -> None:
         json.dump(data, handle, ensure_ascii=False, indent=2)
         handle.write("\n")
     temp_path.replace(path)
+
+
+def digest(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def require_profile(profile_id: str) -> Path:
@@ -96,8 +101,51 @@ def initialize_project(
     )
     write_json(project_dir / "project.json", project)
 
+    workflow_path = project_dir / "planning" / "workflow_state.json"
+    workflow = load_json(workflow_path)
+    workflow.update(
+        {
+            "project_id": resolved_id,
+            "skill_versions": {
+                "director-skill": {"sha256": digest(SKILL_DIR / "SKILL.md")},
+                "product_profile": product_profile,
+                "style_profile": style_profile,
+            },
+            "updated_at": created_at,
+        }
+    )
+    write_json(workflow_path, workflow)
+
+    candidates_path = project_dir / "planning" / "skill_update_candidates.json"
+    candidates = load_json(candidates_path)
+    candidates["project_id"] = resolved_id
+    write_json(candidates_path, candidates)
+
+    alignment_path = project_dir / "review" / "alignment_manifest.json"
+    alignment = load_json(alignment_path)
+    alignment["project_id"] = resolved_id
+    write_json(alignment_path, alignment)
+
     shutil.copy2(product_path, project_dir / "library" / "product_bible.json")
     shutil.copy2(style_path, project_dir / "library" / "style_bible.json")
+    product_profile_data = load_json(product_path)
+    product_library_path = project_dir / "library" / "product_library.json"
+    product_library = load_json(product_library_path)
+    product_library["products"] = [
+        {
+            "id": product_profile,
+            "name": product_profile_data.get("name", product_profile),
+            "active": True,
+            "rights_cleared": False,
+            "usage_scope": "internal_test",
+            "profile_path": "library/product_bible.json",
+            "version": product_profile_data.get("version", 1),
+            "states": sorted((product_profile_data.get("states") or {}).keys()),
+            "reference_assets": [],
+            "approved_result_assets": [],
+        }
+    ]
+    write_json(product_library_path, product_library)
     return project_dir
 
 

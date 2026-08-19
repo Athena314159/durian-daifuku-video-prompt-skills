@@ -4,9 +4,14 @@
 from __future__ import annotations
 
 import json
+import hashlib
+import re
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
+
+from PIL import Image
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -37,6 +42,9 @@ def main() -> int:
             style_profile="ugc-food-review-v1",
             project_id="test-project",
         )
+        assert (project_dir / "planning" / "workflow_state.json").is_file()
+        assert (project_dir / "planning" / "skill_update_candidates.json").is_file()
+        assert (project_dir / "review" / "alignment_manifest.json").is_file()
 
         source_file = project_dir / "source" / "original.mp4"
         source_frame = project_dir / "source" / "test-source.jpg"
@@ -44,10 +52,13 @@ def main() -> int:
         first_frame = project_dir / "source" / "test-approved.jpg"
         product_reference = project_dir / "source" / "product-reference.jpg"
         source_file.write_bytes(b"test-video-placeholder")
-        source_frame.write_bytes(b"test-image-placeholder")
-        beauty_frame.write_bytes(b"test-image-placeholder")
-        first_frame.write_bytes(b"test-image-placeholder")
-        product_reference.write_bytes(b"test-image-placeholder")
+        for path, color in (
+            (source_frame, (210, 180, 150)),
+            (beauty_frame, (200, 170, 140)),
+            (first_frame, (190, 160, 130)),
+            (product_reference, (230, 210, 180)),
+        ):
+            Image.new("RGB", (180, 320), color).save(path)
 
         project = read_json(project_dir / "project.json")
         project["source_video"] = "source/original.mp4"
@@ -107,6 +118,8 @@ def main() -> int:
                     "opening_hook_seconds": 3.0,
                     "target_average_shot_seconds": 4.0,
                     "maximum_single_shot_seconds": 5.0,
+                    "maximum_on_screen_chars_per_second": 5.0,
+                    "maximum_voiceover_chars_per_second": 5.5,
                     "rhythm_notes": ["单镜头自测"],
                 },
                 "segments": [
@@ -210,6 +223,13 @@ def main() -> int:
                         "delivery_rationale": "字幕稿解释拉伸卖点，人物画面专注展示动作。",
                         "script_text": "你看这个冰皮，轻轻一拉就能看出它有多软糯。",
                         "speech_timing": None,
+                        "speech_capacity": {
+                            "segment_count": 1,
+                            "effective_characters": 19,
+                            "speakable_seconds": 4.0,
+                            "characters_per_second": 4.75,
+                            "excluded_intervals": []
+                        },
                         "voice_direction": "年轻女性自然画外音，像向熟人分享；前半句轻快，软糯二字轻微加重",
                         "foley": ["手指接触糯米皮的轻微软糯摩擦声", "安静室内底噪"],
                         "music": "低音量轻快无歌词音乐"
@@ -232,6 +252,63 @@ def main() -> int:
         }
         write_json(project_dir / "shots" / "shot_manifest.json", manifest)
 
+        reuse_plan = read_json(project_dir / "planning" / "asset_reuse_plan.json")
+        reuse_plan.update(
+            {
+                "status": "reviewed",
+                "scope": {
+                    "current_project": ".",
+                    "historical_packages": [str(project_dir)],
+                    "requested_operations": ["product_replace", "reuse_frames"],
+                },
+                "inventory": [
+                    {
+                        "asset_id": "FRAME-S001-APPROVED",
+                        "asset_type": "approved_frame",
+                        "library_layer": "scene_shot",
+                        "path": "source/test-approved.jpg",
+                        "sha256": hashlib.sha256(first_frame.read_bytes()).hexdigest(),
+                        "width": 180,
+                        "height": 320,
+                        "approval_status": "approved",
+                        "rights_status": "cleared",
+                        "source_project": "test-project",
+                        "source_shot_ids": ["S001"],
+                        "avatar_ids": [],
+                        "product_ids": ["durian-daifuku-v1"],
+                        "product_states": ["stretched"],
+                        "has_source_subtitles": False,
+                        "has_watermark": False,
+                        "is_composite_or_contact_sheet": False,
+                    }
+                ],
+                "shot_decisions": [
+                    {
+                        "shot_id": "S001",
+                        "decision": "reuse",
+                        "candidate_asset_ids": ["FRAME-S001-APPROVED"],
+                        "selected_asset_ids": ["FRAME-S001-APPROVED"],
+                        "required_avatar_ids": [],
+                        "required_product_ids": ["durian-daifuku-v1"],
+                        "required_product_states": ["stretched"],
+                        "identity_review": "not_applicable",
+                        "product_review": "matched",
+                        "scene_action_review": "matched",
+                        "allowed_deterministic_transforms": [],
+                        "generation_reason": None,
+                        "candidate_rejection_reasons": [],
+                    }
+                ],
+                "summary": {
+                    "reused_frame_count": 1,
+                    "new_generation_count": 0,
+                    "rejected_asset_count": 0,
+                    "expected_word_image_count": 1,
+                },
+            }
+        )
+        write_json(project_dir / "planning" / "asset_reuse_plan.json", reuse_plan)
+
         lint = lint_project(project_dir)
         assert lint["counts"]["ERROR"] == 0, lint
         compiled = compile_project(project_dir)
@@ -242,6 +319,78 @@ def main() -> int:
         assert "字幕稿在本镜头作为后期画外音" in prompt_text
         assert "人物展示产品" in prompt_text
         assert (project_dir / "review" / "shot_cards.md").is_file()
+
+        prompt_path = project_dir / "prompts" / "S001.md"
+        match = re.search(r"```text\n(.*?)\n```", prompt_text, re.S)
+        assert match
+        body = match.group(1)
+        body += "测试" * ((3000 - len(re.sub(r"\s+", "", body)) + 1) // 2)
+        prompt_path.write_text(prompt_text[: match.start(1)] + body + prompt_text[match.end(1) :], encoding="utf-8")
+        docx_path = project_dir / "exports" / "test.docx"
+        exported = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPT_DIR / "export_jimeng_docx.py"),
+                "--project-dir",
+                str(project_dir),
+                "--out",
+                str(docx_path),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert exported.returncode == 0, exported.stdout + exported.stderr
+        export_manifest = read_json(docx_path.with_suffix(".manifest.json"))
+        assert export_manifest["embedded_media_count"] == 1
+        assert export_manifest["reused_frame_count"] == 1
+
+        aligned = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPT_DIR / "align_exports.py"),
+                "--project-dir",
+                str(project_dir),
+                "--docx",
+                str(docx_path),
+                "--require-docx",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert aligned.returncode == 0, aligned.stdout + aligned.stderr
+        alignment = read_json(project_dir / "review" / "alignment_manifest.json")
+        assert alignment["summary"]["status"] == "aligned"
+        assert alignment["shots"][0]["checks"]["prompt_text_aligned"] is True
+        assert alignment["shots"][0]["checks"]["frame_aligned"] is True
+        assert (project_dir / "exports" / "完整逐分镜Prompt.txt").is_file()
+        assert len(list((project_dir / "exports" / "shots").glob("S001_*.txt"))) == 1
+
+        candidates = read_json(project_dir / "planning" / "skill_update_candidates.json")
+        candidates["candidates"] = [
+            {
+                "candidate_id": "RULE-TEST-001",
+                "category": "alignment",
+                "observed_problem": "测试问题",
+                "proposed_rule": "每次导出后核对唯一事实源哈希。",
+                "scope": "cross_project",
+                "evidence": ["review/alignment_manifest.json"],
+                "target_skill": "director-skill",
+                "target_resource": "references/workflow.md",
+                "status": "new",
+                "user_approved": False,
+            }
+        ]
+        write_json(project_dir / "planning" / "skill_update_candidates.json", candidates)
+        reviewed = subprocess.run(
+            [sys.executable, str(SCRIPT_DIR / "review_skill_candidates.py"), "--project-dir", str(project_dir)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert reviewed.returncode == 0, reviewed.stdout + reviewed.stderr
+        assert (project_dir / "review" / "skill_update_report.md").is_file()
 
     print("SELF TEST PASSED")
     return 0
