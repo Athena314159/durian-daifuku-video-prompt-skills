@@ -1,0 +1,273 @@
+{
+  "schema_version": "2.0",
+  "profile_id": "durian-daifuku-v2",
+  "product_family": "durian_daifuku",
+  "name": "约7厘米手工榴莲冰皮大福",
+  "version": 5,
+  "supersedes_profile": "durian-daifuku-v1",
+  "immutable_traits": [
+    "完整或可重建产品的标准直径约7厘米、最大不超过7.5厘米；人物手与产品同景深时，完整宽度约为成年食指中段宽度的3.5至4倍并明显小于整只手掌",
+    "原视频旧食品只承担动作、位置和遮挡语义，不承担目标产品尺度；靠近镜头、盘子、人物面部或双手运动时物理体量保持一致",
+    "完整大福在盒内、盘中和手持时共用几何身份DF2-ROUND-7CM-001：连续圆弧、饱满略扁圆；方形盒体或方格内托只可承托和遮挡，不得把直边、直角、切角或压模传给产品",
+    "完整冰皮为暖奶白、米白至浅象牙白，厚约1.5至2.5毫米，连续细腻、平滑、基本不透明",
+    "冰皮最外层覆盖极薄、稀疏、略不均匀、无法逐粒辨认的细糯米粉雾层；粉雾在侧向柔光下形成真实细腻的粉霜哑光",
+    "内馅约90%为连续、浓稠、细腻、无清晰颗粒边界的暖金黄色榴莲果泥，约10%为稀疏、方向不重复、自然融入的软纤维",
+    "内馅保持满而不流并附着于冰皮内壁；只形成少量宽缓连续软起伏，不形成可数小球、疙瘩、米粒、孔洞或蜂窝",
+    "任何受力延长都服从质量守恒：长轴增加时横截面和厚度同步减小，总体积、冰皮量和馅量不增加",
+    "每个静态关键帧只执行一个产品状态和一个唯一终点；动作到达终点后立即停止",
+    "同镜多颗产品共享约7厘米尺寸等级但各有稳定实例身份和轻微手工差异；尺寸一致不等于轮廓、朝向、粉雾分布像素级复制",
+    "原片人物手中可见两颗或三颗食品时，目标镜头保留同样数量；叠放与握持只在接触处产生轻微弹性压扁并保持总体积",
+    "盘子、容器与包装中的产品使用跨分镜库存和布局身份；拿起一颗后容器库存减少一颗，其余实例相对位置不无故重排"
+  ],
+  "scale_contract": {
+    "mode": "physical_consistency",
+    "diameter_cm": 7.0,
+    "maximum_diameter_cm": 7.5,
+    "finger_width_ratio": [3.5, 4.0],
+    "palm_width_ratio": [0.75, 0.8],
+    "default_source_scale_role": "pose_only_incompatible_scale",
+    "required_anchor_types": ["index_finger_mid", "palm", "mouth_width", "known_container_dimension", "approved_scene_scale_master"]
+  },
+  "shape_contract": {
+    "geometry_identity_id": "DF2-ROUND-7CM-001",
+    "silhouette_family": "rounded_slightly_oblate",
+    "cross_context_identity_required": true,
+    "container_geometry_independent": true,
+    "visible_bbox_aspect_ratio": [0.8, 1.25],
+    "maximum_straight_edge_fraction": 0.18,
+    "maximum_right_angle_corner_count": 0,
+    "package_capacity_count": 4,
+    "tray_cell_role": "support_and_occlusion_only",
+    "per_visible_instance_shape_qa": true,
+    "forbidden": [
+      "方块",
+      "立方体",
+      "方糕",
+      "四条直边",
+      "直角轮廓",
+      "切角方形",
+      "贴合方格内托的压模轮廓",
+      "包装示意图轮廓继承",
+      "盒内与手持产品几何身份不一致"
+    ]
+  },
+  "integrity_contract": {
+    "whole_states": ["whole", "held", "plated", "pressed", "global_stretch"],
+    "bite_states": ["bitten"],
+    "opening_states": ["opening_window_seed", "opening_window_established", "pre_break", "break", "hand_torn_cross_section", "early_cohesive_opening", "two_halves_display"],
+    "bitten_removed_mass_ratio": [0.15, 0.3],
+    "bitten_opening_origin": "teeth_contact",
+    "bitten_required_topology": "single_localized_concave_bite_notch",
+    "active_eating_orientation": {
+      "opening_direction": "toward_mouth_and_person",
+      "mouth_contacts_opening_side": true,
+      "camera_facing_opening": false,
+      "rule": "人物正在吃或产品仍在嘴边时，咬口只朝向嘴部和人物大方向，不朝镜头、观众或背离人物"
+    },
+    "forbidden": [
+      "顶部整片剥开或掀盖",
+      "大面积挖空圆坑",
+      "勺挖空腔",
+      "开盆状露馅",
+      "冰皮瓣围住巨大洞口",
+      "抹平涂抹状馅面",
+      "用手撕或规则圆洞冒充咬口",
+      "接触嘴部前已经存在巨大开放空腔"
+    ]
+  },
+  "multi_instance_contract": {
+    "source_count_is_semantic_lock": true,
+    "preserve_source_count_without_visible_event": true,
+    "shared_size_class": "DF2-7CM-MAX7.5CM",
+    "pixel_identical_clones_forbidden": true,
+    "unique_shape_variant_per_instance": true,
+    "allowed_variation": ["轻微手工轮廓差异", "轻微朝向差异", "细粉雾分布差异", "符合接触受力的局部压扁"],
+    "stacked_or_gripped_contact": "slight_local_flattening_with_volume_conservation"
+  },
+  "arrangement_continuity_contract": {
+    "stable_instance_ids": true,
+    "stable_container_id": true,
+    "stable_layout_id": true,
+    "inventory_event_arithmetic_required": true,
+    "pickup_rule": "after_count_equals_before_count_minus_one_and_picked_instance_moves_container_to_hand",
+    "remaining_topology": "preserve_relative_order_and_positions_except_declared_minor_gravity_settling",
+    "natural_packaging_layout": ["非等距小偏移", "轻微不同朝向", "局部自然重叠或遮挡", "不完全平行"],
+    "forbidden": ["完美网格", "完全等距", "全部平行", "陈列柜式对称", "包装与独立袋全部同角度", "拿取后容器数量不变", "剩余产品无动作重排", "实例凭空补回或消失"]
+  },
+  "surface_contract": {
+    "base": "continuous_smooth_opaque_warm_milky_white",
+    "powder_layer": "ultra_fine_sparse_uneven_unresolvable_rice_flour_haze",
+    "powder_visibility": "visible_as_soft_powder_frost_in_oblique_light",
+    "forbidden": ["完全无粉的光滑面团", "可数白点", "粗粉团", "磨砂塑料纹", "包子褶", "收口纹", "毛孔", "蜂窝", "大片透黄"]
+  },
+  "filling_contract": {
+    "color": "clean_warm_golden_yellow",
+    "continuous_puree_ratio": 0.9,
+    "sparse_soft_fiber_ratio": 0.1,
+    "surface_scale": "broad_continuous_soft_relief",
+    "forbidden": ["均匀颗粒", "小球疙瘩", "蛋黄粉化", "米粒感", "孔洞", "蜂窝", "液态爆浆", "黄色细丝", "黄色薄膜", "芝士桥", "口香糖拉丝"]
+  },
+  "state_profiles": {
+    "whole": {
+      "description": "一颗紧凑、饱满、略微扁圆且完整闭合的约7厘米大福",
+      "required": ["完整皮面不露馅", "产品尺度由当前镜头的可靠比例锚点证明"],
+      "forbidden": ["巨型包子", "迷你点心", "提前破裂", "额外产品"]
+    },
+    "held": {
+      "description": "人物以自然接触压痕手持同一颗完整约7厘米大福",
+      "required": ["原食品尺寸不是目标尺度来源", "重建必要的手指接触边缘和接触阴影"],
+      "forbidden": ["为保持旧手势而缩小产品", "手指穿透", "产品悬浮"]
+    },
+    "plated": {
+      "description": "一颗或明确数量的完整约7厘米大福由盘面真实承重",
+      "required": ["盘子尺寸已知时按容器内径计算尺度；未知时绑定批准场景尺度母资产", "接触阴影与主光一致"],
+      "forbidden": ["继承表皮参考图的盘子与占盘比例", "无尺度锚点放行", "大包子化"]
+    },
+    "pressed": {
+      "description": "双拇指或单指明确按压，形成宽圆、圆底、缓坡的连续凹陷",
+      "required": ["周围完整皮面仍然平顺", "未建立撕口、未露馅"],
+      "forbidden": ["放射褶皱", "环形折层", "爆浆", "指头穿透"]
+    },
+    "global_stretch": {
+      "description": "撕口尚未建立，整颗软体沿受力方向连续变为短椭圆或宽软带状",
+      "required": ["长轴增加同时横截面和厚度减小", "完整冰皮继续闭合且不透明"],
+      "forbidden": ["细颈", "孔洞", "露馅", "固定数量连接带", "体积增长"]
+    },
+    "opening_window_seed": {
+      "description": "中央第一次出现极小不规则撕口并首次微微看见内馅，产品仍然是一颗连续主体",
+      "required": ["开口主轴建议4至8毫米并小于正面可见面积约5%", "左右主体之间没有清楚空气间隙", "到达首次微露馅后动作立即停止"],
+      "forbidden": ["大开口", "两半", "完整断面", "临断白带", "空气间隙", "大面积内馅"]
+    },
+    "opening_window_established": {
+      "description": "小而不规则的撕口已经建立，暖金黄内馅小面积可见，但尚未进入临断",
+      "required": ["同一颗主体仍连续", "开口周围冰皮短、宽、连贯并贴馅"],
+      "forbidden": ["两块主体", "临断细颈", "长线", "断面展示"]
+    },
+    "pre_break": {
+      "description": "仅在局部最薄处形成短、宽、不规则且仍连续的临断区",
+      "required": ["其余软体继续质量守恒", "临断区不是可数拉带"],
+      "forbidden": ["2至4条固定白带", "3至6厘米连接带", "橡皮泥长条", "黄色拉丝"]
+    },
+    "break": {
+      "description": "最薄处刚刚自然断开，圆钝软边向两侧短距离柔和回缩",
+      "required": ["断开后有清楚但短的空气间隙", "两块合计仍等于原来一颗"],
+      "forbidden": ["残留白线或黄线", "弹射", "体积增加"]
+    },
+    "bitten": {
+      "description": "牙齿逐渐压迫并咬去约四分之一，形成单个局部内凹真实咬口，剩余主体保持可重建约7厘米体量",
+      "required": ["剩余宽度约为可见嘴宽1.4至1.6倍", "只有牙齿接触侧出现一个局部内凹咬口并保留压痕证据", "缺失质量约15%至30%，内馅只从咬口内部露出", "正在吃或产品仍在嘴边时咬口朝向嘴部和人物大方向，嘴接触咬口侧", "产品离嘴后闭口咀嚼"],
+      "forbidden": ["产品瞬间缩小", "顶部剥开", "挖空大坑", "开盆状露馅", "勺挖空腔", "手撕洞冒充咬口", "嘴接触完整背面而破口朝镜头", "破口朝观众或背离人物", "张口展示食物", "边吃边说", "黄色拉丝"]
+    },
+    "hand_torn_cross_section": {
+      "description": "单个手撕断面，整体低矮宽展并保留圆钝贴馅断边",
+      "required": ["横向仍接近原完整约7厘米直径", "内馅为连续果泥和少量稀疏软纤维"],
+      "forbidden": ["规则刀切", "高半球", "颗粒堆", "蜂窝孔"]
+    },
+    "early_cohesive_opening": {
+      "description": "同一颗产品形成两个互补块体，中央仅有一个短厚不规则果泥黏连团",
+      "required": ["两块间距约1.5至2.5厘米", "短厚黏连团不是拉丝"],
+      "forbidden": ["黄色细丝", "薄膜", "芝士桥", "两个完整球"]
+    },
+    "two_halves_display": {
+      "description": "中央黏连已断开，两互补断面朝镜头并以空气间隙分离",
+      "required": ["两块合拢可重建约7厘米产品", "断边圆钝贴馅且两块不镜像"],
+      "forbidden": ["残留连接线", "体积增加", "镜像复制", "刀切面"]
+    }
+  },
+  "global_negative_constraints": [
+    "尺寸跳变或继承原食品错误尺度",
+    "盒内产品继承方形盒体或方格内托轮廓、出现直边直角或与手持产品形状不一致",
+    "完全无粉的面团皮或可数粉粒表皮",
+    "颗粒、疙瘩、孔洞或蜂窝内馅",
+    "固定数量白色拉带、黄色拉丝或透明膜",
+    "一个静态关键帧包含多个动作终点",
+    "顶部剥开、挖空大坑、开盆状露馅或手撕洞冒充真实咬口",
+    "人物正在吃或产品仍在嘴边时破口朝镜头、观众或背离人物，嘴却接触完整背面",
+    "原片手持两三件食品却只替换为一颗大福，或多颗大福像素级克隆",
+    "包装和独立袋完美网格、等距、全平行或陈列柜式对称",
+    "盘中实例跨分镜无动作重排，或拿起一颗后盘中数量没有减少"
+  ],
+  "required_shot_contract": {
+    "fields": ["scale_lock", "shape_lock", "integrity_lock", "instance_lock", "surface_lock", "filling_lock", "endpoint_lock", "reference_roles"],
+    "scale_modes": ["physical_consistency"],
+    "source_scale_roles": ["compatible_scale_anchor", "pose_only_incompatible_scale"],
+    "single_terminal_state": true
+  },
+  "reference_assets": [
+    {
+      "id": "DF2-SCALE-01",
+      "source_path": "assets/product-references/durian-daifuku-v2/q-scale-pressure-approved-test.png",
+      "target_path": "source/references/durian-daifuku-v2/q-scale-pressure-approved-test.png",
+      "role": "scale_and_pressure_only",
+      "allowed_inheritance": ["约7厘米相对食指与掌心比例", "宽圆平滑按压凹陷"],
+      "forbidden_inheritance": ["手部身份", "背景", "散粉", "构图", "撕口终点"],
+      "allowed_states": ["whole", "held", "pressed"],
+      "approved": true
+    },
+    {
+      "id": "DF2-SURFACE-01",
+      "source_path": "assets/product-references/durian-daifuku-v2/shell-color-surface-clean.png",
+      "target_path": "source/references/durian-daifuku-v2/shell-color-surface-clean.png",
+      "role": "shell_color_and_smooth_base_only",
+      "allowed_inheritance": ["暖米白固有色", "平滑完整皮面基底"],
+      "forbidden_inheritance": ["盘子", "产品占盘比例", "完整构图", "产品尺寸", "完全无粉的面团观感"],
+      "allowed_states": ["*"],
+      "approved": true
+    },
+    {
+      "id": "DF2-OPENING-SEED-01",
+      "source_path": "assets/product-references/durian-daifuku-v2/v3-opening-seed.png",
+      "target_path": "source/references/durian-daifuku-v2/v3-opening-seed.png",
+      "role": "opening_topology_only",
+      "allowed_inheritance": ["双手初始受力位置", "首次微露馅的时间状态"],
+      "forbidden_inheritance": ["产品大小", "扁平轮廓", "手和指甲身份", "背景产品", "光线", "规则孔形"],
+      "allowed_states": ["opening_window_seed"],
+      "approved": true
+    },
+    {
+      "id": "DF2-TORN-EDGE-01",
+      "source_path": "assets/product-references/durian-daifuku-v2/torn-edge-only.png",
+      "target_path": "source/references/durian-daifuku-v2/torn-edge-only.png",
+      "role": "torn_edge_only",
+      "allowed_inheritance": ["圆钝柔软并向内贴馅的断边"],
+      "forbidden_inheritance": ["内馅", "尺寸", "木桌", "构图", "光线"],
+      "allowed_states": ["break", "hand_torn_cross_section", "early_cohesive_opening", "two_halves_display"],
+      "approved": true
+    },
+    {
+      "id": "DF2-OPENED-TEXTURE-01",
+      "source_path": "assets/product-references/durian-daifuku-v2/opened-texture-v5.png",
+      "target_path": "source/references/durian-daifuku-v2/opened-texture-v5.png",
+      "role": "opened_texture_only",
+      "allowed_inheritance": ["暖金黄连续浓稠满馅", "圆钝贴馅断边"],
+      "forbidden_inheritance": ["场景", "尺寸", "开口轮廓", "两手构图", "底部灰透薄皮"],
+      "allowed_states": ["hand_torn_cross_section", "early_cohesive_opening", "two_halves_display"],
+      "approved": true
+    }
+  ],
+  "knowledge_seed": [
+    {
+      "id": "KB-DF2-BASE-001",
+      "type": "rule",
+      "title": "榴莲大福v2不可变产品合同",
+      "positive_instruction": "完整或可重建主体按约7厘米、最大7.5厘米和当前同景深比例锚点执行；盒内、盘中、手持共用DF2-ROUND-7CM-001圆润略扁几何身份，方形容器只承托或遮挡；冰皮保持暖米白平滑基底与侧光可见的极薄细糯米粉雾层；内馅保持连续浓稠果泥主体与少量稀疏软纤维；每镜只到达一个唯一终点。",
+      "negative_instruction": "不继承原食品错误尺度或方形容器轮廓，不生成直边直角方糕、完全无粉面团皮、颗粒孔洞内馅、固定数量拉带或多终点静态帧。",
+      "applies_to": {"product_profile": "durian-daifuku-v2"},
+      "priority": 100,
+      "approved": true,
+      "version": 5
+    },
+    {
+      "id": "KB-DF2-OPENING-SEED-001",
+      "type": "rule",
+      "title": "首次微露馅终点",
+      "positive_instruction": "当前唯一终点为opening_window_seed：中央首次出现极小不规则撕口，内馅只微微可见，整体仍是一颗连续主体；到达首次微露馅后动作立即停止。",
+      "negative_instruction": "不继续进入临断、断裂、两半、断面展示或大面积露馅。",
+      "applies_to": {"product_profile": "durian-daifuku-v2", "product_state": ["opening_window_seed"]},
+      "priority": 110,
+      "approved": true,
+      "version": 5
+    }
+  ],
+  "updated_at": "2026-08-25T17:45:00+08:00"
+}

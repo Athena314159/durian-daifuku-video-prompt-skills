@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "project_id": null,
+  "current_stage": "intake",
+  "execution_tier": "source_intake",
+  "status": "in_progress",
+  "canonical_prompt_source": "prompts",
+  "completed_stages": [],
+  "blocked_by": [],
+  "prompt_delivery_authorized": false,
+  "compile_receipt": null,
+  "source_ready": false,
+  "pending_inputs": [],
+  "next_allowed_actions": [
+    "import_source_video",
+    "extract_source_transcript",
+    "inventory_source_visuals"
+  ],
+  "skill_versions": {},
+  "updated_at": null
+}
