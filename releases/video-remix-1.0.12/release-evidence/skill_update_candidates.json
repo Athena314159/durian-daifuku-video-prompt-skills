@@ -1,0 +1,28 @@
+{
+  "schema_version": "2.0",
+  "project_id": "20260825-release-1-0-12-review",
+  "candidates": [
+    {
+      "candidate_id": "CAND-MIGRATION-CURRENT-BASIS-REBIND-001",
+      "category": "legacy_project_migration",
+      "observed_problem": "A valid user directive can explicitly say '依据 video-remix-1.0.9' to name the then-current atomic identity/product execution basis. During migration, preserving that line verbatim causes the recursive old-release contamination gate to block the active copy, while deleting the file would lose user requirements.",
+      "proposed_rule": "During explicit migration, rewrite only the narrow grammar '依据 video-remix-x.y.z' to the current release, preserve the rest of the directive byte-for-byte, record the rewritten path in the cleanup receipt, and leave every other old-release mention untouched so ambiguous history/prohibition/rollback text still fails closed.",
+      "scope": "cross_project",
+      "evidence": [
+        "migration of durian-daifuku-female1-86417284 failed with MIGRATED_ACTIVE_COPY_LEGACY_CONTAMINATION at planning/user_directives.md",
+        "the retained sentence describes the current atomic execution basis and remains semantically valid except for its obsolete release identifier"
+      ],
+      "target_skill": "jimeng-video-remix-director + extract-video-prompt",
+      "target_resource": "scripts/migrate_durian_daifuku_v2.py; migration regression test; integration and main Skill documentation",
+      "risk_level": "high",
+      "interaction_surfaces": ["explicit migration", "user directive preservation", "legacy contamination scanner", "cleanup receipt", "atomic image execution"],
+      "regression_case_ids": ["GOLDEN-MIGRATION-CURRENT-BASIS-REBIND-001", "GOLDEN-MIGRATION-AMBIGUOUS-OLD-RELEASE-STILL-BLOCKED-002"],
+      "replaces": ["all-or-nothing behavior that either preserved an obsolete current-basis token and blocked migration or required deleting valid user directives"],
+      "rollback_trigger": "Migration changes any text outside the exact current-basis token, silently rewrites an ambiguous old-release mention, deletes user directives, or permits an old release token to survive the active recursive scan.",
+      "status": "approved",
+      "user_approved": true,
+      "reviewed_at": "2026-08-25T18:05:00+08:00",
+      "review_reason": "Required to apply the user-authorized new release without losing existing user directives or weakening the old-project contamination gate."
+    }
+  ]
+}

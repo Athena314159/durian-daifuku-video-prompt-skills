@@ -1,0 +1,4 @@
+interface:
+  display_name: "即梦视频复刻总控 Agent"
+  short_description: "先提取可编辑原片口播，再按需双开图文任务与 Word 交付"
+  default_prompt: "使用 $jimeng-video-remix-director 接管当前即梦视频复刻任务；先把执行档位写入 project.json，默认 source_intake，只有明确需要可复制 Prompt 时才进入 prompt_only 或 full_delivery。若尚无锁定新版口播，先提取并在当前任务直接贴出可编辑原片口播；未明确换品时保留原片产品。文线统一使用 narrative-six-layer-v1：先完整复原原片叙事、触发、人物意图和情绪弧，再写逐时动作与正向六层，限制词不得凑字。prompt_only 只豁免生图与成品图 QA，绝不豁免 canonical 结构和 lint；总控必须运行 pipeline compile 与 verify-prompt-delivery，只交付编译器生成的 Sxxx.md/汇总稿及有效回执，禁止手写另一个总控 Prompt。若我明确要求图文双 Agent，请真实查重并并行创建或复用精确命名的图、文任务；当前总控独占 canonical 合并和最终 DOCX。"
