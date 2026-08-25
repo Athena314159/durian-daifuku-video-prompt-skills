@@ -1,0 +1,8 @@
+{
+  "schema_version": "1.0",
+  "version": 1,
+  "products": [],
+  "selection_policy": {
+    "one_target_product_per_project": true
+  }
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "提取视频prompt skill"
+  short_description: "复刻原片并复用人物、产品和历史分镜资产，交付逐镜 Prompt"
+  default_prompt: "使用 $extract-video-prompt 继续当前视频文字线；若由图文双 Agent 总控启动，遵守机器值 branch_role=text，只做文案与逐镜 Prompt。先按 narrative-six-layer-v1 理解原片情境、人物触发、意图、情绪转折和镜头落点，再把适用六层融入逐时动作；禁止用限制词、审计字段或通用六层模板凑字。输出并校验 text-handoff-v2.0，不重复开任务、提帧、生图或导出 Word。"
