@@ -1,0 +1,48 @@
+{
+  "schema_version": "2.0",
+  "project_id": "release-1.0.6-review",
+  "candidates": [
+    {
+      "candidate_id": "CAND-ATOMIC-IMAGE-GENERATION-001",
+      "category": "image_generation_integrity",
+      "observed_problem": "旧项目仍可生图，换头与换产品可被拆成半成品链并继续叠修。",
+      "proposed_rule": "Block legacy execution until a non-destructive explicit migration; require a hash-bound authorization for every image call; when identity and product are both requested, perform them atomically from the exact original source and reject any partial candidate without allowing it to become a retry input.",
+      "scope": "cross_project",
+      "evidence": [
+        "../../reports/candidate-release-gate.json"
+      ],
+      "target_skill": "jimeng-video-remix-director",
+      "target_resource": "scripts/image_generation_gate.py",
+      "risk_level": "high",
+      "interaction_surfaces": [
+        "project release lock",
+        "legacy migration",
+        "first-frame generation",
+        "identity replacement",
+        "product replacement",
+        "pixel preflight",
+        "asset reuse",
+        "candidate approval",
+        "prompt generation pack"
+      ],
+      "regression_case_ids": [
+        "GOLDEN-LEGACY-IMAGE-GENERATION-BLOCK-001",
+        "GOLDEN-EXPLICIT-RELEASE-MIGRATION-001",
+        "GOLDEN-ATOMIC-IDENTITY-PRODUCT-EDIT-001",
+        "GOLDEN-RETURN-TO-ORIGINAL-001",
+        "GOLDEN-GENERATION-REQUEST-RECEIPT-001",
+        "GOLDEN-DAIFUKU-OUTPUT-SCALE-QA-001"
+      ],
+      "replaces": [
+        "staged identity-clean-frame then product-only edit",
+        "partial-success field freezing for combined identity/product shots",
+        "documentation-only legacy generation warning"
+      ],
+      "rollback_trigger": "任一旧叙事/音频/产品/包装门回退，旧项目未经迁移获得生图授权，原子镜只完成一项，或失败候选成为重试输入。",
+      "status": "approved",
+      "user_approved": true,
+      "reviewed_at": "2026-08-25T13:36:46+08:00",
+      "review_reason": "结构条件满足；等待用户批准、候选版本和 release gate，不得直接写 live Skill。"
+    }
+  ]
+}
