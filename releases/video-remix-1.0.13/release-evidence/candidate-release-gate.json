@@ -1,0 +1,130 @@
+{
+  "schema_version": "video-remix-release-report-v1.0",
+  "checked_at": "2026-08-25T17:57:10+08:00",
+  "status": "valid",
+  "bundle_release_id": "video-remix-1.0.13",
+  "prompt_authoring_contract": "narrative-six-layer-v1",
+  "error_count": 0,
+  "errors": [],
+  "tests": {
+    "extract": [
+      {
+        "path": "scripts/test_lint_prompt_txt.py",
+        "exit_code": 0,
+        "output_tail": "ion (__main__.PromptLintRegressionTests.test_short_adjacent_source_shots_can_merge_without_deletion) ... ok\ntest_short_source_shot_cannot_remain_unmerged (__main__.PromptLintRegressionTests.test_short_source_shot_cannot_remain_unmerged) ... ok\ntest_six_layer_audit_fields_cannot_leak_into_prompt (__main__.PromptLintRegressionTests.test_six_layer_audit_fields_cannot_leak_into_prompt) ... ok\ntest_source_pixel_lock_rejects_camera_axis_push_language (__main__.PromptLintRegressionTests.test_source_pixel_lock_rejects_camera_axis_push_language) ... ok\ntest_source_shot_merge_must_keep_inventory_order (__main__.PromptLintRegressionTests.test_source_shot_merge_must_keep_inventory_order) ... ok\ntest_story_plan_can_explicitly_enable_both_prompt_limits (__main__.PromptLintRegressionTests.test_story_plan_can_explicitly_enable_both_prompt_limits) ... ok\ntest_undisclosed_creative_accent_proposal_is_blocked (__main__.PromptLintRegressionTests.test_undisclosed_creative_accent_proposal_is_blocked) ... ok\ntest_unobserved_swallow_cannot_be_forced_into_source_eating_timeline (__main__.PromptLintRegressionTests.test_unobserved_swallow_cannot_be_forced_into_source_eating_timeline) ... ok\ntest_user_delivery_directory_must_contain_only_one_docx (__main__.PromptLintRegressionTests.test_user_delivery_directory_must_contain_only_one_docx) ... ok\ntest_user_delivery_directory_requires_a_docx (__main__.PromptLintRegressionTests.test_user_delivery_directory_requires_a_docx) ... ok\ntest_valid_editable_docx_with_real_image_relationship_passes (__main__.PromptLintRegressionTests.test_valid_editable_docx_with_real_image_relationship_passes) ... ok\ntest_valid_inserted_add_has_no_fabricated_source_timecode (__main__.PromptLintRegressionTests.test_valid_inserted_add_has_no_fabricated_source_timecode) ... ok\ntest_wrong_speaker_is_blocked (__main__.PromptLintRegressionTests.test_wrong_speaker_is_blocked) ... ok\n\n----------------------------------------------------------------------\nRan 48 tests in 0.159s\n\nOK"
+      },
+      {
+        "path": "scripts/test_validate_text_handoff.py",
+        "exit_code": 0,
+        "output_tail": "__.TextHandoffV2Tests.test_break_person_and_hands_only_modes_and_crisp_proof_are_required) ... ok\ntest_collection_order_or_missing_unit_is_rejected_by_both (__main__.TextHandoffV2Tests.test_collection_order_or_missing_unit_is_rejected_by_both) ... ok\ntest_eating_event_binding_timeline_and_non_contiguous_flag_are_required (__main__.TextHandoffV2Tests.test_eating_event_binding_timeline_and_non_contiguous_flag_are_required) ... ok\ntest_extract_text_gate_rejects_even_valid_image_handoff (__main__.TextHandoffV2Tests.test_extract_text_gate_rejects_even_valid_image_handoff) ... ok\ntest_missing_time_description_script_and_six_layer_are_rejected (__main__.TextHandoffV2Tests.test_missing_time_description_script_and_six_layer_are_rejected) ... ok\ntest_natural_language_alignment_table_is_forbidden (__main__.TextHandoffV2Tests.test_natural_language_alignment_table_is_forbidden) ... ok\ntest_old_v1_is_rejected_by_both (__main__.TextHandoffV2Tests.test_old_v1_is_rejected_by_both) ... ok\ntest_packaging_visible_faces_are_locked_and_required (__main__.TextHandoffV2Tests.test_packaging_visible_faces_are_locked_and_required) ... ok\ntest_positive_payload_passes_both_cli_entry_points (__main__.TextHandoffV2Tests.test_positive_payload_passes_both_cli_entry_points) ... ok\ntest_positive_payload_passes_both_python_apis (__main__.TextHandoffV2Tests.test_positive_payload_passes_both_python_apis) ... ok\ntest_same_skill_linter_api_can_run_structural_check_without_claiming_merge_proof (__main__.TextHandoffV2Tests.test_same_skill_linter_api_can_run_structural_check_without_claiming_merge_proof) ... ok\ntest_schema_is_byte_for_byte_canonical_director_v2 (__main__.TextHandoffV2Tests.test_schema_is_byte_for_byte_canonical_director_v2) ... ok\ntest_three_rows_or_images_cannot_impersonate_three_eating_events (__main__.TextHandoffV2Tests.test_three_rows_or_images_cannot_impersonate_three_eating_events) ... ok\n\n----------------------------------------------------------------------\nRan 13 tests in 0.163s\n\nOK"
+      }
+    ],
+    "director": [
+      {
+        "path": "scripts/test_delivery_contract.py",
+        "exit_code": 0,
+        "output_tail": "DELIVERY CONTRACT TESTS PASSED"
+      },
+      {
+        "path": "scripts/test_commercial_emotion_rhythm.py",
+        "exit_code": 0,
+        "output_tail": "commercial emotion/rhythm regression tests: PASS"
+      },
+      {
+        "path": "scripts/test_image_user_approval_contract.py",
+        "exit_code": 0,
+        "output_tail": "image user-approval/package-integration regression tests: PASS"
+      },
+      {
+        "path": "scripts/test_revocation_cascade.py",
+        "exit_code": 0,
+        "output_tail": "revocation cascade regression tests: PASS"
+      },
+      {
+        "path": "scripts/test_pipeline_contract_hardening.py",
+        "exit_code": 0,
+        "output_tail": "PIPELINE CONTRACT HARDENING TESTS PASSED: SRC/ADD, timeline, six-layer, eating, break, init, migration"
+      },
+      {
+        "path": "scripts/test_validate_branch_handoff.py",
+        "exit_code": 0,
+        "output_tail": "FULL-DELIVERY HANDOFF V2 TESTS PASSED (16 cases)"
+      },
+      {
+        "path": "scripts/test_merge_branch_handoffs.py",
+        "exit_code": 0,
+        "output_tail": "DETERMINISTIC HANDOFF MERGE TESTS PASSED (2 cases)"
+      },
+      {
+        "path": "scripts/test_source_intake_contract.py",
+        "exit_code": 0,
+        "output_tail": "SOURCE INTAKE CONTRACT TESTS PASSED: 14 cases"
+      },
+      {
+        "path": "scripts/test_resolve_launch_contract.py",
+        "exit_code": 0,
+        "output_tail": "LAUNCH CONTRACT TESTS PASSED: 5 cases"
+      },
+      {
+        "path": "scripts/test_format_dual_thread_titles.py",
+        "exit_code": 0,
+        "output_tail": "3 paired-title cases passed"
+      },
+      {
+        "path": "scripts/test_init_project_modes.py",
+        "exit_code": 0,
+        "output_tail": "PROJECT PRODUCT MODE TESTS PASSED: 2 cases"
+      },
+      {
+        "path": "scripts/test_project_package_master.py",
+        "exit_code": 0,
+        "output_tail": "PACKAGE MASTER PROJECTION TEST PASSED"
+      },
+      {
+        "path": "scripts/test_workflow_state_statuses.py",
+        "exit_code": 0,
+        "output_tail": "WORKFLOW STATE STATUS TESTS PASSED: 8 transitions"
+      },
+      {
+        "path": "scripts/test_prompt_only_canonical_gate.py",
+        "exit_code": 0,
+        "output_tail": "SELF TEST PASSED\nPROMPT-ONLY CANONICAL GATE PASSED"
+      },
+      {
+        "path": "scripts/self_test.py",
+        "exit_code": 0,
+        "output_tail": "SELF TEST PASSED"
+      },
+      {
+        "path": "scripts/test_skill_release_gate.py",
+        "exit_code": 0,
+        "output_tail": "Skill release gate tests passed"
+      },
+      {
+        "path": "scripts/test_durian_daifuku_v2_contract.py",
+        "exit_code": 0,
+        "output_tail": "{\"status\": \"ok\", \"contract\": \"durian-daifuku-v2\"}"
+      },
+      {
+        "path": "scripts/test_daifuku_pixel_preflight.py",
+        "exit_code": 0,
+        "output_tail": "{\"status\": \"ok\", \"contract\": \"daifuku-pixel-preflight\"}"
+      },
+      {
+        "path": "scripts/test_image_generation_gate.py",
+        "exit_code": 0,
+        "output_tail": "{\"status\": \"ok\", \"contract\": \"atomic-image-generation-gate\"}"
+      }
+    ]
+  },
+  "tracked_file_sha256": {
+    "/Users/apple/Documents/Codex/2026-08-25/prompt/candidate-video-remix-1.0.13/extract-video-prompt/SKILL.md": "7f78ce50afcfd4e9abae0b42f1df7e4ed27c9ee33e91290f5cd19c1da3035515",
+    "/Users/apple/Documents/Codex/2026-08-25/prompt/candidate-video-remix-1.0.13/extract-video-prompt/references/semantic-role-performance-gate.md": "fff855c909be11959b6d808046b0f23f1e1b42c7e027172319958910581f0b15",
+    "/Users/apple/Documents/Codex/2026-08-25/prompt/candidate-video-remix-1.0.13/extract-video-prompt/scripts/lint_prompt_txt.py": "0a488d9d4e78f047a5b6ebe951e46ffafd7b8f3844222208ab5dedc9d1b3d51b",
+    "/Users/apple/Documents/Codex/2026-08-25/prompt/candidate-video-remix-1.0.13/jimeng-video-remix-director/SKILL.md": "db9ec7a668a63c61abda8f266b480ff2d47a0f70a907b1df3cf4fb88b0f9e679",
+    "/Users/apple/Documents/Codex/2026-08-25/prompt/candidate-video-remix-1.0.13/jimeng-video-remix-director/references/prompt-rules.md": "0a7aff720830af81246fd33f89150915ef83e0ff7938d0bdd07103d58a3bc7aa",
+    "/Users/apple/Documents/Codex/2026-08-25/prompt/candidate-video-remix-1.0.13/jimeng-video-remix-director/references/skill-change-governance.md": "4d35e203722c670c17bcdf2d153df8511fbc9c538263870187ad0d043fb17941",
+    "/Users/apple/Documents/Codex/2026-08-25/prompt/candidate-video-remix-1.0.13/jimeng-video-remix-director/scripts/pipeline.py": "860211600cfce6efdc9017ca6c33c9c1c84d0a09a4741123b3f7f6838f28fef2",
+    "/Users/apple/Documents/Codex/2026-08-25/prompt/candidate-video-remix-1.0.13/jimeng-video-remix-director/scripts/image_generation_gate.py": "9c69657c019497f383e9e19ec5df0be48538d21dfcd5eadd85aad1e0b940975e"
+  }
+}

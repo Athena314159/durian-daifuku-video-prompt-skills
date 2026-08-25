@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.codex/jimeng/source_intake_handoff.schema.json",
+  "title": "Jimeng source-intake branch handoff v1.0",
+  "type": "object",
+  "required": [
+    "schema_version", "execution_tier", "branch_role", "source_intake_contract_sha256",
+    "product_mode", "target_product_reference_bound", "status", "pending_inputs",
+    "blocked_items", "artifacts"
+  ],
+  "properties": {
+    "schema_version": {"const": "source-intake-handoff-v1.0"},
+    "execution_tier": {"const": "source_intake"},
+    "branch_role": {"enum": ["image", "text"]},
+    "source_intake_contract_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "product_mode": {"enum": ["preserve_source_product", "replace_product"]},
+    "target_product_reference_bound": {"type": "boolean"},
+    "status": {"enum": ["source_inventory_ready", "transcript_ready", "awaiting_inputs", "blocked"]},
+    "pending_inputs": {
+      "type": "array",
+      "items": {"enum": ["revised_script", "target_product_reference"]},
+      "uniqueItems": true
+    },
+    "blocked_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kind", "code", "evidence"],
+        "properties": {
+          "kind": {"enum": ["technical_error", "fact_conflict", "validation_failure"]},
+          "code": {"type": "string", "minLength": 1},
+          "evidence": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "artifacts": {"type": "array"},
+    "source_inventory": {
+      "type": "object",
+      "required": ["source_shot_ids", "source_shots"],
+      "properties": {
+        "source_shot_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^SRC[0-9]+$"}
+        },
+        "source_shots": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["source_shot_id", "timecode", "image_path", "caption"],
+            "properties": {
+              "source_shot_id": {"type": "string", "pattern": "^SRC[0-9]+$"},
+              "timecode": {
+                "type": "object",
+                "required": ["start", "end", "duration"],
+                "properties": {
+                  "start": {"type": "number", "minimum": 0},
+                  "end": {"type": "number", "exclusiveMinimum": 0},
+                  "duration": {"type": "number", "exclusiveMinimum": 0}
+                },
+                "additionalProperties": true
+              },
+              "image_path": {"type": "string", "minLength": 1},
+              "caption": {"type": "string", "minLength": 1}
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "language_detection": {
+      "type": "object",
+      "required": ["decision_source", "evidence_priority", "evidence_used", "excluded_signals"],
+      "properties": {
+        "decision_source": {"enum": ["visible_subtitles", "automatic_language_detection", "speech_audio"]},
+        "evidence_priority": {
+          "const": ["visible_subtitles", "automatic_language_detection", "speech_audio", "lip_reading"]
+        },
+        "evidence_used": {
+          "type": "array",
+          "items": {"enum": ["visible_subtitles", "automatic_language_detection", "speech_audio", "lip_reading"]},
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "excluded_signals": {
+          "type": "array",
+          "items": {"enum": ["product_name", "brand_name", "country_name", "origin_label"]},
+          "uniqueItems": true
+        }
+      }
+    },
+    "transcript": {
+      "type": "object",
+      "required": ["source_language", "editable_text", "segments"],
+      "properties": {
+        "source_language": {"type": "string", "minLength": 2},
+        "editable_text": {"type": "string", "minLength": 1},
+        "segments": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["start", "end", "text", "evidence", "confidence"],
+            "properties": {
+              "start": {"type": "number", "minimum": 0},
+              "end": {"type": "number", "exclusiveMinimum": 0},
+              "text": {"type": "string", "minLength": 1},
+              "evidence": {"type": "array", "minItems": 1},
+              "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+            }
+          }
+        }
+      }
+    },
+    "controller_reply": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"const": "blocked"}}},
+      "then": {"properties": {"blocked_items": {"minItems": 1}}}
+    },
+    {
+      "if": {"properties": {"branch_role": {"const": "text"}}},
+      "then": {
+        "required": ["language_detection", "transcript", "controller_reply"],
+        "properties": {
+          "controller_reply": {
+            "required": ["must_inline_editable_text", "may_only_report_path", "deliver_before_other_branch_complete"],
+            "properties": {
+              "must_inline_editable_text": {"const": true},
+              "may_only_report_path": {"const": false},
+              "deliver_before_other_branch_complete": {"const": true}
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"branch_role": {"const": "image"}}},
+      "then": {"required": ["source_inventory"]}
+    },
+    {
+      "if": {
+        "allOf": [
+          {"properties": {"branch_role": {"const": "image"}}},
+          {"properties": {"status": {"const": "source_inventory_ready"}}}
+        ]
+      },
+      "then": {
+        "required": ["source_inventory", "controller_reply"],
+        "properties": {
+          "controller_reply": {
+            "required": ["must_inline_images", "may_only_report_path", "deliver_when_ready"],
+            "properties": {
+              "must_inline_images": {"const": true},
+              "may_only_report_path": {"const": false},
+              "deliver_when_ready": {"const": true}
+            }
+          }
+        }
+      }
+    }
+  ],
+  "additionalProperties": true
+}

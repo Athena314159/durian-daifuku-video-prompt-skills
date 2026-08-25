@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.0",
+  "asset_group_id": "aoqiaoxiaofang-retail-box-v1",
+  "approval": {
+    "status": "user_approved_for_knowledge_base",
+    "approved_at": "2026-08-25T09:44:00+08:00",
+    "scope": "packaging_identity_geometry_and_visible_panel_layout"
+  },
+  "identity": {
+    "brand": "奥巧小方",
+    "product_name_front": "猫山王榴莲冰皮大福",
+    "package_level": "retail_outer_box",
+    "dimensions_cm": {"length": 15.0, "width": 15.0, "height": 4.5},
+    "visible_net_content": "200克（50克×4）",
+    "units_per_box": 4
+  },
+  "assets": [
+    {
+      "id": "PKG-AQXF-BOX-FRONT",
+      "path": "assets/aoqiaoxiaofang-retail-box-v1/front.png",
+      "sha256": "b33e3f6445f7c1c9337ec781c21018d9c408e99aa647f2e417443d83db31623d",
+      "pixels": [1280, 1280],
+      "role": "front_artwork_and_layout",
+      "visible_facts": ["黄色正面", "斜向压纹", "蓝字白边", "左下榴莲线稿", "右侧大福示意图", "净含量200克（50克×4）"],
+      "forbidden_inheritance": ["实拍手部", "室内背景", "正面产品示意图作为真实产品母版"]
+    },
+    {
+      "id": "PKG-AQXF-BOX-BACK-NUTRITION",
+      "path": "assets/aoqiaoxiaofang-retail-box-v1/back-nutrition.png",
+      "sha256": "6459f43e667853e2715c7350a386c6a5644a31236d825e5334db0d9e6edf8b11",
+      "pixels": [4284, 4284],
+      "role": "ingredients_nutrition_barcode_panel_projection",
+      "visible_facts": ["黄色底与同系列压纹", "配料与营养成分黑字区块", "白底条码"],
+      "forbidden_inheritance": ["手部身份", "室内背景", "无法逐字确认的小字重写或乱码"]
+    },
+    {
+      "id": "PKG-AQXF-BOX-SIDE-LABEL",
+      "path": "assets/aoqiaoxiaofang-retail-box-v1/side-label.png",
+      "sha256": "7b260475013bce6cbc9cda960b5342a43a7d99ec0b00fb021b7cd0a2b5048c25",
+      "pixels": [3024, 3024],
+      "role": "long_side_product_name_warning_and_white_label_area",
+      "visible_facts": ["猫山王榴莲冰皮大福蓝字白边", "右上温馨提示框", "右侧白色标签框"],
+      "forbidden_inheritance": ["手部", "房间", "背景其他盒子", "拍摄透视作为固定包装几何"]
+    },
+    {
+      "id": "PKG-AQXF-BOX-SIDE-BRAND",
+      "path": "assets/aoqiaoxiaofang-retail-box-v1/side-brand.png",
+      "sha256": "f82d6701558212af97db75c905ad1a5e1b5e00df666ca9da9f99eb436c4fb129",
+      "pixels": [3024, 3024],
+      "role": "opposite_long_side_large_product_name",
+      "visible_facts": ["黄色底与斜向压纹", "大号蓝字白边猫山王榴莲冰皮大福"],
+      "forbidden_inheritance": ["实拍手部", "室内背景", "纸盒翘曲作为标准结构"]
+    }
+  ],
+  "commercial_claims": {
+    "user_locked_script_claims": ["马来西亚猫山王榴莲", "含量大于等于40%", "三十九块九到手三大盒"],
+    "release_status": "requires_label_and_rights_review"
+  },
+  "topology_rules": [
+    "15×15×4.5厘米外盒不是单颗膜袋",
+    "单盒四颗，三盒理论总库存十二颗",
+    "三盒同时出现时保持同规格和正方形主面，盒厚约为边长30%",
+    "运输纸箱必须按三只外盒真实体积建立内尺寸、堆叠方向和承重",
+    "外盒替换原片小袋时必须减少数量，禁止缩小外盒维持小袋密度"
+  ]
+}
