@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "status": "draft",
+  "scope": {
+    "current_project": ".",
+    "historical_packages": [],
+    "requested_operations": []
+  },
+  "libraries": {
+    "avatar_library": "library/avatar_library.json",
+    "product_library": "library/product_library.json",
+    "product_bible": "library/product_bible.json",
+    "knowledge_index": "library/knowledge_index.json"
+  },
+  "inventory": [],
+  "shot_decisions": [],
+  "gallery_receipt": {
+    "status": "pending_display",
+    "display_receipt_id": null,
+    "displayed_at": null,
+    "approved_at": null,
+    "asset_refs": []
+  },
+  "summary": {
+    "reused_frame_count": 0,
+    "new_generation_count": 0,
+    "rejected_asset_count": 0,
+    "expected_word_image_count": 0
+  }
+}
