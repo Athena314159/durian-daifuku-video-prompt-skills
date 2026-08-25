@@ -1,0 +1,36 @@
+{
+  "schema_version": "2.0",
+  "project_id": "20260825-release-1-0-8-review",
+  "candidates": [
+    {
+      "candidate_id": "CAND-MIGRATION-STATE-PRESERVATION-001",
+      "category": "legacy_migration_integrity",
+      "observed_problem": "A release-to-release migration of an already migrated v2 project retained shot-level migration_required but could reset project-level requires_manual_shot_map_rebuild to false.",
+      "proposed_rule": "Aggregate every inherited migration_required shot into the new migration requirements and retain its legacy_state across release migrations.",
+      "scope": "cross_project",
+      "evidence": [
+        "scripts/test_durian_daifuku_v2_contract.py"
+      ],
+      "target_skill": "jimeng-video-remix-director",
+      "target_resource": "scripts/migrate_durian_daifuku_v2.py",
+      "risk_level": "high",
+      "interaction_surfaces": [
+        "legacy migration",
+        "project execution state",
+        "shot state binding",
+        "generation authorization"
+      ],
+      "regression_case_ids": [
+        "GOLDEN-MIGRATION-REQUIRED-STATE-PRESERVED-001"
+      ],
+      "replaces": [
+        "recomputing the manual-rebuild aggregate only for direct v1 migrations"
+      ],
+      "rollback_trigger": "Any inherited migration_required shot is omitted from the project-level manual rebuild gate.",
+      "status": "approved",
+      "user_approved": true,
+      "reviewed_at": "2026-08-25T14:18:00+08:00",
+      "review_reason": "结构条件满足；等待用户批准、候选版本和 release gate，不得直接写 live Skill。"
+    }
+  ]
+}
