@@ -1,0 +1,46 @@
+{
+  "schema_version": "2.0",
+  "project_id": "20260825-release-1-0-9-review",
+  "candidates": [
+    {
+      "candidate_id": "CAND-PACKAGE-PRODUCT-SHAPE-LOCK-001",
+      "category": "product_geometry_consistency",
+      "observed_problem": "Durian daifuku inside square packaging can inherit the tray or box geometry and become square, while the held product remains rounded, because the current contract validates package artwork and product scale/texture but not each visible packaged product silhouette.",
+      "proposed_rule": "Give every durian daifuku one stable rounded geometry identity across packaged, plated and held contexts; keep container geometry independent; compile the lock into canonical prompts; and reject results unless every substantially visible packaged instance passes machine-readable silhouette QA.",
+      "scope": "cross_project",
+      "evidence": [
+        "user-observed packaged daifuku repeatedly becomes square and differs from held product",
+        "assets/profiles/durian-daifuku-v2.json lacks shape_lock and package_content_lock",
+        "scripts/pipeline.py validates package faces but not contained product silhouettes",
+        "scripts/image_generation_gate.py lacks shape and per-packaged-instance QA"
+      ],
+      "target_skill": "jimeng-video-remix-director",
+      "target_resource": "assets/profiles/durian-daifuku-v2.json; scripts/pipeline.py; scripts/image_generation_gate.py; durian-daifuku-five-states references",
+      "risk_level": "high",
+      "interaction_surfaces": [
+        "product profile",
+        "shot contract validation",
+        "canonical prompt compilation",
+        "packaging shots",
+        "image generation authorization",
+        "joint result receipt",
+        "release migration"
+      ],
+      "regression_case_ids": [
+        "GOLDEN-DAIFUKU-PACKAGE-ROUND-GEOMETRY-001",
+        "GOLDEN-DAIFUKU-PACKAGE-PER-INSTANCE-QA-002",
+        "GOLDEN-DAIFUKU-CROSS-CONTEXT-GEOMETRY-003"
+      ],
+      "replaces": [
+        "prose-only rounded-shape guidance without a structured shape contract",
+        "package validation that stops at box faces and artwork",
+        "single-product result QA that can approve one representative item for a multi-item box"
+      ],
+      "rollback_trigger": "Any packaged daifuku can pass while inheriting square tray geometry, any visible instance is omitted from QA, or held/plated/packaged products no longer share one geometry identity.",
+      "status": "approved",
+      "user_approved": true,
+      "reviewed_at": "2026-08-25T14:31:02+08:00",
+      "review_reason": "结构条件满足；等待用户批准、候选版本和 release gate，不得直接写 live Skill。"
+    }
+  ]
+}
