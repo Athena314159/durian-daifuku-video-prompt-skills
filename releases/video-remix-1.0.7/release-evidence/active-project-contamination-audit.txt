@@ -1,0 +1,13 @@
+Audit date: 2026-08-25 Asia/Shanghai
+Baseline: installed video-remix-1.0.6
+
+Observed after explicit migration:
+- first_frames/candidates and first_frames/prompts remained in some active copies.
+- assets/candidates remained in at least one active copy.
+- review/gallery_receipt.json, review/first_frame_batch_qa.json, and dated candidate hard-audit records still described or approved durian-daifuku-v1 results.
+- planning/source_intake_contract.json and planning/product_continuity_lock.json retained durian-daifuku-v1 bindings.
+- source/references/product-durian-daifuku-v1 remained recursively discoverable.
+- target-local legacy-release-artifacts contained old prompts, generation packs, candidates, approvals, pixel plans, and asset-reuse decisions.
+
+Required correction:
+Keep the untouched source project outside the active path as rollback evidence. The migrated active copy must remove every stale generation/approval path, remove target-local legacy archives, rewrite current source-intake product bindings to durian-daifuku-v2, invalidate continuity locks, and fail closed when a non-allowlisted legacy release/profile token remains.

@@ -1,0 +1,43 @@
+{
+  "schema_version": "2.0",
+  "project_id": "20260825-release-1-0-7-review",
+  "candidates": [
+    {
+      "candidate_id": "CAND-MIGRATION-ACTIVE-SANITIZER-001",
+      "category": "legacy_migration_integrity",
+      "observed_problem": "显式迁移清理了标准候选目录，但旧项目仍可能在 first_frames/candidates、assets/candidates、旧首帧 QA、v1 source-intake/product-continuity 合同和 target 内部 legacy-release-artifacts 中保留可递归检索的错误图或旧产品锁。",
+      "proposed_rule": "A migrated active copy must contain no legacy generation prompts, candidates, approvals, QA receipts, continuity locks, v1 reference directories, or recursively discoverable legacy archive. Preserve the untouched source project as rollback evidence, sanitize the active copy, rewrite current source-intake product bindings to v2, and fail migration if a non-allowlisted old release/profile token remains.",
+      "scope": "cross_project",
+      "evidence": [
+        "../../reports/active-project-contamination-audit.txt"
+      ],
+      "target_skill": "jimeng-video-remix-director",
+      "target_resource": "scripts/migrate_durian_daifuku_v2.py",
+      "risk_level": "high",
+      "interaction_surfaces": [
+        "legacy project migration",
+        "recursive asset discovery",
+        "first-frame candidates",
+        "source intake product binding",
+        "continuity lock",
+        "generation QA receipts",
+        "rollback evidence"
+      ],
+      "regression_case_ids": [
+        "GOLDEN-MIGRATED-ACTIVE-COPY-SANITIZED-001",
+        "GOLDEN-NONSTANDARD-LEGACY-CANDIDATE-PATH-001",
+        "GOLDEN-LEGACY-PRODUCT-BINDING-SCAN-001"
+      ],
+      "replaces": [
+        "migration cleanup limited to standard review/candidates and top-level candidates paths",
+        "target-internal legacy-release-artifacts archive",
+        "manual assumption that recursive discovery ignores legacy project artifacts"
+      ],
+      "rollback_trigger": "任何迁移后的活动副本仍可检索到旧 Prompt、旧候选/批准图、旧 QA 回执、v1 参考目录或非审计用途的旧 release/profile 绑定。",
+      "status": "approved",
+      "user_approved": true,
+      "reviewed_at": "2026-08-25T14:05:51+08:00",
+      "review_reason": "结构条件满足；等待用户批准、候选版本和 release gate，不得直接写 live Skill。"
+    }
+  ]
+}

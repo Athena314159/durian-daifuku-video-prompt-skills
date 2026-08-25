@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.1",
+  "source_video": null,
+  "sha256": null,
+  "duration": null,
+  "width": null,
+  "height": null,
+  "frame_rate": null,
+  "audio_extracted": false,
+  "audio": null,
+  "video_first_frame": null,
+  "interval_frames": [],
+  "scene_frames": [],
+  "interval_candidates": [],
+  "scene_candidates": [],
+  "source_shots": [],
+  "transcript": [],
+  "analyzed_at": null,
+  "current_analysis": null,
+  "analysis_runs": []
+}
