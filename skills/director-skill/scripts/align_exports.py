@@ -50,6 +50,7 @@ UNIT_HEADING_RE = re.compile(r"^((?:SRC|ADD)\d+)(?:｜|$)")
 FRAME_CAPTION_RE = re.compile(
     r"^((?:SRC|ADD)\d+)｜([^｜]+)｜已批准(｜连续边界参考)?｜职责：(.+)$"
 )
+NO_GENERATION_DOCX_MODE = "no_generation_prompt_docx_alignment"
 
 
 def now_iso() -> str:
@@ -278,6 +279,56 @@ def exact_label(label: str, value: Any) -> str:
     return f"{label}：{value}"
 
 
+def align_no_generation_mode(project_dir: Path, docx_path: Path | None, export_manifest_path: Path | None, require_docx: bool) -> int:
+    blockers: list[dict[str, Any]] = []
+    def block(code: str, message: str): blockers.append({"code": code, "message": message})
+    contract_path = project_dir / "planning" / "no_generation_prompt_docx_alignment_contract.json"
+    if not contract_path.is_file(): block("NO_GENERATION_DOCX_CONTRACT_MISSING", str(contract_path))
+    contract = read_json(contract_path) if contract_path.is_file() else {}
+    if contract.get("schema_version") != "no-generation-prompt-docx-alignment-v1.0" or contract.get("approved_target_frame_count") != 0:
+        block("NO_GENERATION_DOCX_CONTRACT_INVALID", "Schema mismatch or nonzero approved target-frame claim.")
+    pack = read_json(project_dir / "prompts" / "generation_pack.json")
+    shots = read_json(project_dir / "shots" / "shot_manifest.json").get("shots") or []
+    lock = read_json(project_dir / "planning" / "revised_script_lock.json")
+    if docx_path is None or not docx_path.is_file():
+        if require_docx: block("DOCX_REQUIRED", "Final DOCX is missing.")
+        body_text=""; media_count=0
+    else:
+        try:
+            with zipfile.ZipFile(docx_path) as z:
+                root=ET.fromstring(z.read("word/document.xml"))
+                # Preserve editable paragraph and run breaks. Prompts are
+                # canonical multi-line payloads; flattening every w:t node
+                # made a valid Prompt appear absent even when DOCX contained
+                # the exact text with w:br boundaries.
+                body=root.find("w:body", NS)
+                body_text="\n".join(element_text(child) for child in list(body or []))
+                media_count=len([n for n in z.namelist() if n.startswith("word/media/")])
+        except Exception as exc:
+            block("DOCX_INVALID",str(exc)); body_text=""; media_count=0
+    export = read_json(export_manifest_path) if export_manifest_path and export_manifest_path.is_file() else {}
+    if not export: block("NO_GENERATION_EXPORT_MANIFEST_MISSING","Export manifest is required.")
+    elif docx_path and export.get("docx_sha256") != sha_file(docx_path): block("DOCX_HASH_MISMATCH","DOCX differs from export receipt.")
+    if export.get("compile_id") != pack.get("compile_id"): block("COMPILE_ID_MISMATCH","DOCX export and generation pack differ.")
+    if export.get("canonical_input_hashes") != canonical_input_hashes(project_dir): block("CANONICAL_INPUT_HASH_MISMATCH","Canonical inputs changed after export.")
+    if media_count != len(contract.get("references") or []): block("REFERENCE_IMAGE_COUNT_MISMATCH",f"DOCX media={media_count}, contract={len(contract.get('references') or [])}")
+    required_texts=[lock.get("editable_text","")]
+    for item in contract.get("references") or []: required_texts.append(str(item.get("caption") or ""))
+    for shot in shots:
+        sid=str(shot.get("id")); required_texts.extend([sid,"动作镜头对应","逐时动作","可复制Prompt原文"])
+        p=project_dir/f"prompts/{sid}.md"
+        required_texts.append(prompt_from_markdown(p) if p.is_file() else "__MISSING_PROMPT__")
+        for unit in [*(shot.get("source_units") or []),*(shot.get("inserted_units") or [])]:
+            required_texts.extend([str(unit.get("source_shot_id") or unit.get("inserted_shot_id")),str(unit.get("script_text") or "无"),str(unit.get("storyboard_description") or "")])
+        for beat in shot.get("action_beats") or []:
+            required_texts.append(str(beat.get("action") or ""))
+    missing=[value for value in required_texts if value and value not in body_text]
+    if missing: block("DOCX_CANONICAL_TEXT_MISSING",f"Missing {len(missing)} canonical text values; first={missing[:3]}")
+    result={"schema_version":"no-generation-alignment-v1.0","status":"aligned" if not blockers else "blocked","document_delivery_mode":NO_GENERATION_DOCX_MODE,"checked_at":now_iso(),"docx":str(docx_path) if docx_path else None,"docx_sha256":sha_file(docx_path) if docx_path and docx_path.is_file() else None,"compile_id":pack.get("compile_id"),"approved_target_frame_count":0,"reference_count":len(contract.get("references") or []),"blocker_count":len(blockers),"blockers":blockers}
+    write_json(project_dir/"review/alignment_manifest.json",result); update_workflow(project_dir,not blockers,blockers)
+    print(json.dumps(result,ensure_ascii=False)); return 0 if not blockers else 1
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Read-only audit of a final Jimeng storyboard DOCX.")
     parser.add_argument("--project-dir", required=True, type=Path)
@@ -288,6 +339,16 @@ def main() -> int:
     project_dir = args.project_dir.expanduser().resolve()
 
     project = read_json(project_dir / "project.json")
+    if project.get("document_delivery_mode") == NO_GENERATION_DOCX_MODE:
+        docx_path = args.docx.expanduser().resolve() if args.docx else None
+        if docx_path is None:
+            candidates=sorted((project_dir/"exports").glob("*.docx"),key=lambda p:p.stat().st_mtime)
+            docx_path=candidates[-1] if candidates else None
+        export_manifest_path=args.export_manifest.expanduser().resolve() if args.export_manifest else None
+        if export_manifest_path is None and docx_path:
+            internal=project_dir/"review"/f"{docx_path.stem}.manifest.json"
+            export_manifest_path=internal if internal.is_file() else None
+        return align_no_generation_mode(project_dir,docx_path,export_manifest_path,args.require_docx)
     shot_manifest = read_json(project_dir / "shots" / "shot_manifest.json")
     shots = shot_manifest.get("shots") or []
     if not isinstance(shots, list):

@@ -14,9 +14,12 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from init_project import initialize_project, load_json, write_json  # noqa: E402
+from init_project import RELEASE_MANIFEST_PATH, initialize_project, load_json, write_json  # noqa: E402
 from migrate_durian_daifuku_v2 import active_legacy_contamination, migrate, rebind_current_execution_basis  # noqa: E402
 from pipeline import compile_shot, validate_durian_daifuku_v2_sequence, validate_durian_daifuku_v2_shot  # noqa: E402
+
+
+CURRENT_RELEASE = load_json(RELEASE_MANIFEST_PATH)["bundle_release_id"]
 
 
 def role(asset: dict) -> dict:
@@ -36,13 +39,14 @@ def opening_state(product: dict) -> dict:
         "state": "opening_window_seed",
         "count": 1,
         "packaging": "none",
+        "source_package_inventory": {"shipping_carton_present": False, "observed_levels": [], "visibility_transition": "none"},
         "shot_specific_traits": ["中央首次微露馅后立即停止"],
         "scale_lock": {
             "mode": "physical_consistency",
             "source_scale_role": "pose_only_incompatible_scale",
             "anchor": {
                 "type": "index_finger_mid",
-                "expected_ratio": [3.5, 4.0],
+                "expected_ratio": [4.0, 4.4],
                 "evidence": "同景深接触食指中段可见，完整可重建宽度可直接复核",
             },
         },
@@ -151,7 +155,7 @@ def main() -> int:
         product = load_json(project_dir / "library/product_bible.json")
         knowledge = load_json(project_dir / "library/knowledge_index.json")
         assert product["profile_id"] == "durian-daifuku-v2"
-        assert product["version"] == 6
+        assert product["version"] == 7
         assert any(entry.get("id") == "KB-DF2-BASE-001" for entry in knowledge["entries"])
         assert any(entry.get("id") == "KB-DF2-OPENING-SEED-001" for entry in knowledge["entries"])
         image_entries = [entry for entry in knowledge["entries"] if entry.get("type") == "image"]
@@ -168,6 +172,9 @@ def main() -> int:
             "DF2-PACK-RETAIL-BACK-NUTRITION-01",
             "DF2-PACK-RETAIL-SIDE-LABEL-01",
             "DF2-PACK-RETAIL-SIDE-BRAND-01",
+            "DF2-PACK-CARTON-FRONT-01",
+            "DF2-PACK-CARTON-SIDE-01",
+            "DF2-PACK-CARTON-TOP-INTERIOR-01",
         }
         assert all((project_dir / item["target_path"]).is_file() for item in packaging_assets.values())
         assert all(item.get("approved") is True and item.get("user_approved") is True for item in packaging_assets.values())
@@ -178,9 +185,9 @@ def main() -> int:
             "依据 video-remix-1.0.9 执行原子换头换产品。\n禁止使用 video-remix-1.0.8 的旧 Prompt。\n",
             encoding="utf-8",
         )
-        assert rebind_current_execution_basis(directive_probe, "video-remix-1.0.13") is True
+        assert rebind_current_execution_basis(directive_probe, "video-remix-1.0.17") is True
         directive_text = directive_probe.read_text(encoding="utf-8")
-        assert "依据 video-remix-1.0.13" in directive_text
+        assert "依据 video-remix-1.0.17" in directive_text
         assert "禁止使用 video-remix-1.0.8" in directive_text
 
         shot = opening_shot(product)
@@ -461,7 +468,7 @@ def main() -> int:
         assert migrated_state["shape_lock"]["geometry_identity_id"] == "DF2-ROUND-7CM-001"
         assert not (migrated / "legacy-release-artifacts").exists()
         assert not list((migrated / "prompts").glob("*.md"))
-        assert not active_legacy_contamination(migrated, "video-remix-1.0.13")
+        assert not active_legacy_contamination(migrated, CURRENT_RELEASE)
 
         legacy_v2_dir = initialize_project(
             "daifuku-v2-release-test",
@@ -478,12 +485,28 @@ def main() -> int:
         legacy_v2_manifest = load_json(legacy_v2_dir / "shots" / "shot_manifest.json")
         old_shot = opening_shot(load_json(legacy_v2_dir / "library" / "product_bible.json"))
         old_shot["asset_links"]["approved_generation_first_frame"] = "review/approved/old.png"
+        old_shot["exact_first_frame_generation_contract"] = {
+            "contract_binding": {"bundle_release_id": "video-remix-1.0.20"}
+        }
+        old_shot["asset_links"]["source_first_frame"] = str(legacy_v2_dir / "source" / "frames" / "S001.png")
+        old_shot["source_units"] = [{
+            "source_shot_id": "SRC001",
+            "delivery_asset_ids": ["OLD-SRC001"],
+            "image_generation_authorization": "review/image-generation-requests/old.authorization.json",
+            "image_generation_result_receipt": "review/image-generation-requests/old.result.json",
+            "candidate_generation_first_frame": "images/current_release/old.png",
+            "approved_generation_first_frame": "images/current_release/old.png",
+        }]
         unresolved_shot = opening_shot(load_json(legacy_v2_dir / "library" / "product_bible.json"))
         unresolved_shot["id"] = "S002"
         unresolved_shot["product_state"]["state"] = "migration_required"
         unresolved_shot["product_state"]["legacy_state"] = "stretched"
         legacy_v2_manifest["shots"] = [old_shot, unresolved_shot]
         write_json(legacy_v2_dir / "shots" / "shot_manifest.json", legacy_v2_manifest)
+        write_json(
+            legacy_v2_dir / "planning" / "skill_update_candidates.json",
+            {"history": [{"from": "video-remix-1.0.19", "to": "video-remix-1.0.20"}]},
+        )
         (legacy_v2_dir / "prompts" / "S001.md").write_text("old prompt\n", encoding="utf-8")
         old_candidate = legacy_v2_dir / "review" / "candidates" / "old.png"
         old_candidate.parent.mkdir(parents=True, exist_ok=True)
@@ -494,6 +517,16 @@ def main() -> int:
         asset_candidate = legacy_v2_dir / "assets" / "candidates" / "old.png"
         asset_candidate.parent.mkdir(parents=True, exist_ok=True)
         asset_candidate.write_bytes(b"old asset candidate")
+        write_json(
+            legacy_v2_dir / "review" / "image-generation-qa" / "S001.json",
+            {"candidate": {"path": str(legacy_v2_dir / "images" / "current_release" / "old.png")}},
+        )
+        old_image_prompt = legacy_v2_dir / "review" / "image-generation-prompts" / "S001.txt"
+        old_image_prompt.parent.mkdir(parents=True, exist_ok=True)
+        old_image_prompt.write_text("old image prompt\n", encoding="utf-8")
+        current_release_image = legacy_v2_dir / "images" / "current_release" / "old.png"
+        current_release_image.parent.mkdir(parents=True, exist_ok=True)
+        current_release_image.write_bytes(b"old current-release candidate")
         write_json(
             legacy_v2_dir / "planning" / "source_intake_contract.json",
             {
@@ -513,40 +546,87 @@ def main() -> int:
             legacy_v2_dir / "review" / "candidate_hard_audit_20260825.json",
             {"skill_release": "video-remix-1.0.5"},
         )
+        stale_execution_paths = (
+            "handoffs/image_regeneration_handoff_video-remix-1.0.13.json",
+            "planning/activation_receipt.json",
+            "planning/locked_shot_map.json",
+            "planning/packaging_migration_audit.json",
+            "planning/pixel_preflight/S001_pixel_plan.json",
+            "review/lint_report.json",
+        )
+        for relative in stale_execution_paths:
+            write_json(legacy_v2_dir / relative, {"bundle_release_id": "video-remix-1.0.13", "status": "stale"})
+        write_json(
+            legacy_v2_dir / "planning" / "controller_prompt_blueprints.json",
+            {"release": "video-remix-1.0.25", "source_project": str(legacy_v2_dir)},
+        )
+        write_json(
+            legacy_v2_dir / "planning" / "revised_script_lock.json",
+            {"editable_text": "锁定口播", "canonical_reconciliation": {"release": "video-remix-1.0.25"}},
+        )
+        write_json(
+            legacy_v2_dir / "work" / "branches" / "image" / "old_handoff.json",
+            {"bundle_release_id": "video-remix-1.0.25", "status": "audit_only"},
+        )
+        generated_old = legacy_v2_dir / "images" / "generated" / "S007_ADD003_old_wrong_scale.png"
+        generated_old.parent.mkdir(parents=True, exist_ok=True)
+        generated_old.write_bytes(b"old wrong-scale candidate")
         nested_legacy = legacy_v2_dir / "legacy-release-artifacts" / "old" / "prompts"
         nested_legacy.mkdir(parents=True, exist_ok=True)
         (nested_legacy / "S001.md").write_text("durian-daifuku-v1", encoding="utf-8")
         migrated_v2 = migrate(legacy_v2_dir, root / "migrated-v2-release")
         assert load_json(legacy_v2_dir / "project.json")["skill_release_lock"]["bundle_release_id"] == "video-remix-1.0.6"
         migrated_v2_project = load_json(migrated_v2 / "project.json")
-        assert migrated_v2_project["skill_release_lock"]["bundle_release_id"] == "video-remix-1.0.13"
+        assert migrated_v2_project["skill_release_lock"]["bundle_release_id"] == CURRENT_RELEASE
         assert migrated_v2_project["migration_requirements"]["requires_manual_shot_map_rebuild"] is True
         assert migrated_v2_project["migration_requirements"]["ambiguous_legacy_states"] == [{"shot_id": "S002", "legacy_state": "stretched"}]
         migrated_v2_shot = load_json(migrated_v2 / "shots" / "shot_manifest.json")["shots"][0]
         assert migrated_v2_shot["product_state"]["shape_lock"]["container_shape_inheritance"] is False
         assert migrated_v2_shot["asset_links"]["approved_generation_first_frame"] is None
+        assert migrated_v2_shot["exact_first_frame_generation_contract"]["contract_binding"]["bundle_release_id"] == CURRENT_RELEASE
+        assert migrated_v2_shot["asset_links"]["source_first_frame"] == str(migrated_v2 / "source" / "frames" / "S001.png")
+        assert migrated_v2_shot["source_units"][0]["delivery_asset_ids"] == []
+        for field in ("image_generation_authorization", "image_generation_result_receipt", "candidate_generation_first_frame", "approved_generation_first_frame"):
+            assert field not in migrated_v2_shot["source_units"][0]
+        assert (migrated_v2 / "planning" / "skill_update_candidates.json").is_file()
         assert not (migrated_v2 / "review" / "candidates").exists()
         assert not (migrated_v2 / "first_frames" / "candidates").exists()
         assert not (migrated_v2 / "assets" / "candidates").exists()
+        assert not (migrated_v2 / "images" / "generated").exists()
+        assert not (migrated_v2 / "review" / "image-generation-qa").exists()
+        assert not (migrated_v2 / "review" / "image-generation-prompts").exists()
+        assert not (migrated_v2 / "images" / "current_release").exists()
         assert not (migrated_v2 / "planning" / "product_continuity_lock.json").exists()
         assert not (migrated_v2 / "review" / "first_frame_batch_qa.json").exists()
         assert not (migrated_v2 / "review" / "candidate_hard_audit_20260825.json").exists()
+        assert all(not (migrated_v2 / relative).exists() for relative in stale_execution_paths)
+        assert not (migrated_v2 / "work" / "branches").exists()
+        controller_blueprints = load_json(migrated_v2 / "planning" / "controller_prompt_blueprints.json")
+        assert controller_blueprints["release"] == CURRENT_RELEASE
+        assert controller_blueprints["source_project"] == str(migrated_v2)
+        revised_lock = load_json(migrated_v2 / "planning" / "revised_script_lock.json")
+        assert revised_lock["editable_text"] == "锁定口播"
+        assert revised_lock["canonical_reconciliation"]["release"] == CURRENT_RELEASE
+        fresh_workflow = load_json(migrated_v2 / "planning" / "workflow_state.json")
+        assert fresh_workflow["current_stage"] == "migration_manual_rebind"
+        assert fresh_workflow["prompt_delivery_authorized"] is False
         assert not (migrated_v2 / "legacy-release-artifacts").exists()
         intake = load_json(migrated_v2 / "planning" / "source_intake_contract.json")
         assert intake["target_product_profile"] == "durian-daifuku-v2"
-        assert intake["skill_release"] == "video-remix-1.0.13"
+        assert intake["skill_release"] == CURRENT_RELEASE
         cleanup = load_json(migrated_v2 / "review" / "migration_cleanup_receipt.json")
         assert cleanup["current_execution_basis_rebound_paths"] == ["planning/user_directives.md"]
-        assert "依据 video-remix-1.0.13" in (migrated_v2 / "planning" / "user_directives.md").read_text(encoding="utf-8")
+        assert cleanup["controller_planning_rebound_paths"] == ["planning/controller_prompt_blueprints.json", "planning/revised_script_lock.json"]
+        assert f"依据 {CURRENT_RELEASE}" in (migrated_v2 / "planning" / "user_directives.md").read_text(encoding="utf-8")
         assert cleanup["active_prompts_cleared"] is True
         assert cleanup["active_asset_reuse_plan_reset"] is True
         assert cleanup["active_recursive_legacy_scan"] == "passed"
         reuse = load_json(migrated_v2 / "planning" / "asset_reuse_plan.json")
-        assert reuse["contract_binding"]["bundle_release_id"] == "video-remix-1.0.13"
-        assert not active_legacy_contamination(migrated_v2, "video-remix-1.0.13")
+        assert reuse["contract_binding"]["bundle_release_id"] == CURRENT_RELEASE
+        assert not active_legacy_contamination(migrated_v2, CURRENT_RELEASE)
         bypass = migrated_v2 / "review" / "unrecognized_old_approval.md"
         bypass.write_text("video-remix-1.0.5 durian-daifuku-v1", encoding="utf-8")
-        findings = active_legacy_contamination(migrated_v2, "video-remix-1.0.13")
+        findings = active_legacy_contamination(migrated_v2, CURRENT_RELEASE)
         assert any("unrecognized_old_approval.md" in finding for finding in findings), findings
         bypass.unlink()
 

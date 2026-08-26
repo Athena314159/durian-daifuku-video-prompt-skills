@@ -1,6 +1,6 @@
 {
   "schema_version": "video-remix-golden-cases-v1.0",
-  "bundle_release_id": "video-remix-1.0.13",
+  "bundle_release_id": "video-remix-1.0.34",
   "cases": [
     {
       "case_id": "GOLDEN-DAIFUKU-SCALE-001",
@@ -216,6 +216,186 @@
       "case_id": "GOLDEN-ACTIVE-TASK-EXPLICIT-MIGRATION-001",
       "protects": "historical_active_projects_require_explicit_execution_redirect",
       "expectation": "活动旧任务迁移后，旧项目写入 execution_redirect 并硬阻断执行，新项目写入线程绑定 activation_receipt，防止对话继续调用旧路径。"
+    },
+    {
+      "case_id": "GOLDEN-SHIPPING-CARTON-ADAPTIVE-CAPACITY-001",
+      "protects": "shipping_carton_size_is_model_inferred_and_capacity_validated",
+      "expectation": "固定15×15×4.5厘米零售盒和约7厘米大福不缩小；先按原片锚点、数量和布局推断/调整纸箱尺寸，只有明确场景硬上限下所有布局均无解才报 SOURCE_CONTAINER_CAPACITY_CONFLICT 并停止生成。"
+    },
+    {
+      "case_id": "GOLDEN-SOURCE-PACKAGE-INVENTORY-001",
+      "protects": "source_package_inventory_controls_visibility",
+      "expectation": "精确原帧的包装存在性、层级和数量必须先入账；系统不得隐藏原有纸箱，也不得无用户授权凭空插入另一包装层级。"
+    },
+    {
+      "case_id": "GOLDEN-CARTON-COMPOSITE-RECTIFICATION-001",
+      "protects": "shipping_carton_composite_faces_require_rectified_regions",
+      "expectation": "同一纸箱复合透视母版可服务多个可见面，但正面与侧面必须绑定不同 source_region 四边形并校正投影，顶部内侧只作结构参考。"
+    },
+    {
+      "case_id": "GOLDEN-DAIFUKU-STONE-COLOR-TEXTURE-001",
+      "protects": "daifuku_shell_color_and_stone_texture_are_pixel_audited",
+      "expectation": "成图产品 bbox 必须与批准暖米白参考做哈希绑定的颜色和高频纹理审查；灰棕黑褐石头色或砂石水泥颗粒即拒绝，人工 surface=true 不能绕过。"
+    },
+    {
+      "case_id": "GOLDEN-CROSS-FIELD-SEMANTIC-LINT-001",
+      "protects": "product_state_story_and_audio_semantics_are_cross_checked",
+      "expectation": "opening_window_seed 不得同时承担两半/完整断面职责，plated 不得沿用互补两半，内馅不得拉丝，无画外音证据不得反转声源，口播爆浆不得视觉液态化。"
+    },
+    {
+      "case_id": "GOLDEN-MIGRATION-EXECUTION-CONTRACT-CLEANUP-001",
+      "protects": "legacy_execution_contracts_are_removed_and_rebuilt_during_migration",
+      "expectation": "显式迁移必须删除旧 activation receipt、locked shot map、图 handoff、包装审计、像素计划、workflow 与 lint 结果，并从当前 release 模板重建阻断态 workflow；任何旧 release token 残留都不得激活新项目。"
+    },
+    {
+      "case_id": "GOLDEN-DAIFUKU-DUAL-HAND-SCALE-001",
+      "protects": "daifuku_hand_scale_requires_dual_output_anchors",
+      "expectation": "手持、按压、咬食或撕拉成品必须由至少两个同景深手指/手掌物理关系同时证明约7厘米；产品宽度须为食指中段宽度4.0–4.4倍或掌宽0.88–0.96，任一冲突触发DAIFUKU_SCALE_ANCHOR_CONFLICT。"
+    },
+    {
+      "case_id": "GOLDEN-DAIFUKU-SCENE-ONLY-ANCHOR-BLOCK-001",
+      "protects": "scene_only_scale_anchor_cannot_authorize_hand_interaction",
+      "expectation": "空白片尾卡、纯背景或场景尺度母版不得作为手部互动镜头的唯一尺寸锚点；必须回到含同景深手部证据的精确源帧重建像素计划。"
+    },
+    {
+      "case_id": "GOLDEN-MIGRATION-IMAGES-GENERATED-CLEANUP-001",
+      "protects": "nonstandard_generated_image_paths_are_removed_during_migration",
+      "expectation": "迁移活动副本必须清除images/generated、images/candidates与images/approved等非标准旧生图目录，旧错图只保留在回滚源，不得成为新项目输入。"
+    },
+    {
+      "case_id": "GOLDEN-EXACT-FIRST-FRAME-PRODUCT-ABSENT-001",
+      "protects": "exact_first_frame_product_absence_is_evidence_gated",
+      "expectation": "精确首帧确无产品时必须由单元级原帧证据证明可见数为0，显式关闭产品编辑、产品参考和产品像素QA；不得把后续产品状态前置，也不得用absent标记隐藏原帧已有产品。"
+    },
+    {
+      "case_id": "GOLDEN-UNIT-SCOPED-IMAGE-AUTHORIZATION-001",
+      "protects": "image_generation_authorization_is_delivery_unit_scoped",
+      "expectation": "同一S内的每个SRC/ADD分别绑定自身源帧、Prompt、授权回执和结果回执；一张镜头级授权不得替多个单元生图。"
+    },
+    {
+      "case_id": "GOLDEN-UNIT-SOURCE-INVENTORY-001",
+      "protects": "unit_source_inventory_overrides_shot_terminal_inventory",
+      "expectation": "两托盘16颗、手持1加托盘9颗等精确首帧库存逐unit入账；镜头后续终态的12颗或三盒不得反向覆盖首帧容器、数量和像素计划。"
+    },
+    {
+      "case_id": "GOLDEN-SOURCE-TARGET-VISIBILITY-SPLIT-001",
+      "protects": "source_and_target_product_visibility_are_distinct",
+      "expectation": "原帧有旧产品印刷袋而目标首帧只留无品牌透明保护载体时，必须执行产品中和编辑但不得加载目标大福参考或大福像素计划；原片尾卡源/目标都无产品时才完全豁免产品编辑。"
+    },
+    {
+      "case_id": "GOLDEN-LOCKED-MAP-SIX-FIELD-SEMANTIC-001",
+      "protects": "locked_shot_map_semantic_hash_uses_required_six_field_payload",
+      "expectation": "locked_shot_map 必须包含 source_duration_seconds/source_units/inserted_units/generation_shot_map/eating_plan/break_plan 六项正式语义载荷，内嵌 semantic_sha256 必须与统一规范化算法一致；units[] 扩展只由文件SHA继续绑定，不得替代正式语义合同。"
+    },
+    {
+      "case_id": "GOLDEN-EXACT-FIRST-FRAME-STALE-SHOT-TEXT-001",
+      "protects": "unit_exact_frame_contract_rejects_stale_shot_text",
+      "expectation": "unit 锁定精确首帧目标产品 absent/可见数0时，镜头 hard_constraints 或该unit的 delivery_asset_roles 不得继续正向要求印刷产品包装、2×2产品或任何可见目标产品；发现旧文立即阻断Prompt编译和生图授权。"
+    },
+    {
+      "case_id": "GOLDEN-MIGRATION-AUDIT-VS-ACTIVE-RELEASE-001",
+      "protects": "migration_preserves_historical_audit_but_rebinds_active_shot_release",
+      "expectation": "迁移保留 planning/skill_update_candidates.json 中不可执行的历史版本审计，不把它误报为活动污染；shots/shot_manifest.json 等活动合同中的 bundle_release_id/release_id/skill_release 必须递归重绑当前release，未重绑则阻断。"
+    },
+    {
+      "case_id": "GOLDEN-ABSENT-FIRST-FRAME-RESULT-QA-SCOPE-001",
+      "protects": "absent_first_frame_result_qa_uses_unit_contract",
+      "expectation": "unit精确首帧product_visibility=absent时，record-result必须沿用该unit合同，不得从镜头后续terminal包装、12颗库存或arrangement重新启用package_product_geometry、layout_continuity、inventory_transition及其他目标产品QA。"
+    },
+    {
+      "case_id": "GOLDEN-SOURCE-PRODUCT-NEUTRALIZATION-EVIDENCE-001",
+      "protects": "source_visible_target_absent_result_requires_product_evidence",
+      "expectation": "原帧有旧产品/印刷且目标首帧无产品时，授权仍要求product编辑；结果必须提交product=true与非空证据，证明旧产品、品牌、图案已清除且目标产品可见数为0，不得因不加载目标产品参考而豁免中和证据。"
+    },
+    {
+      "case_id": "GOLDEN-MIGRATION-IMAGE-RUNTIME-CLEANUP-001",
+      "protects": "release_migration_clears_image_runtime_and_rebases_paths",
+      "expectation": "release迁移必须清除review/image-generation-requests、image-generation-qa、image-generation-prompts、images/current_release及unit级授权/结果/候选/批准绑定，旧失败图和旧Prompt不得进入新活动副本。"
+    },
+    {
+      "case_id": "GOLDEN-MIGRATION-ABSOLUTE-PATH-REBIND-001",
+      "protects": "release_migration_clears_image_runtime_and_rebases_paths",
+      "expectation": "迁移后仍需保留的shot canonical绝对路径必须从旧source project根目录确定性重绑到新target project根目录；任何旧release项目路径残留继续触发递归污染阻断。"
+    },
+    {
+      "case_id": "GOLDEN-COMPACT-CONTROLLER-PROMPT-001",
+      "protects": "compact_controller_prompt_preserves_actions_without_internal_audit_ids",
+      "expectation": "显式compact_v1模式必须生成唯一七段canonical Prompt，并满足项目真实字符上限，不得回退到完整知识库与审计字段展开。"
+    },
+    {
+      "case_id": "GOLDEN-COMPACT-PROMPT-NO-INTERNAL-ID-001",
+      "protects": "compact_controller_prompt_preserves_actions_without_internal_audit_ids",
+      "expectation": "可复制Prompt不得出现SRC/ADD、内部beat ID、失败候选、旧Word或容量合同审计术语。"
+    },
+    {
+      "case_id": "GOLDEN-COMPACT-PROMPT-ACTION-COVERAGE-001",
+      "protects": "compact_controller_prompt_preserves_actions_without_internal_audit_ids",
+      "expectation": "compact Prompt虽不显示beat ID，但必须逐条保留canonical beat的时间、动作、声音和产品变化，并由shot input hash与input snapshot绑定。"
+    },
+    {
+      "case_id": "GOLDEN-NO-GENERATION-CONTROLLER-MIGRATION-001",
+      "protects": "no_generation_controller_files_rebind_during_release_migration",
+      "expectation": "release迁移必须保留并重绑controller_prompt_blueprints与revised_script_lock的活动release/path字段，同时删除旧work/branches执行handoff；旧分支证据只留在回滚源项目。"
+    },
+    {
+      "case_id": "GOLDEN-NO-GENERATION-PROMPT-DOCX-ALIGNMENT-001",
+      "protects": "no_generation_prompt_docx_alignment_never_claims_approved_frames",
+      "expectation": "正式no_generation_prompt_docx_alignment模式必须在lint、导出和aligner中区分旧构图参考、旧错误示例与精确源片复用，批准目标帧数量恒为0，任何approved_target_frame声明都fail-closed。"
+    },
+    {
+      "case_id": "GOLDEN-NO-GENERATION-EXPORT-RECEIPT-STATUS-001",
+      "protects": "no_generation_export_accepts_compile_delivery_authorized_receipt",
+      "expectation": "导出器必须接受compiler真实写入的delivery_authorized回执，并继续核对compile_id，不得要求不存在的authorized伪状态。"
+    },
+    {
+      "case_id": "GOLDEN-NO-GENERATION-CONTRACT-MIGRATION-001",
+      "protects": "no_generation_contracts_rebind_during_release_migration",
+      "expectation": "迁移时no-generation DOCX contract与handoff的显式release字段必须重绑到当前发布；旧release字样继续fail-closed。"
+    },
+    {
+      "case_id": "GOLDEN-GENERATION-REQUEST-CANONICAL-TEXT-001",
+      "protects": "generation_request_contains_canonical_prompt_text",
+      "expectation": "生图授权回执必须保存实际提交的完整 Prompt 文本及文本哈希；工具调用文本与回执逐字不一致时阻断。"
+    },
+    {
+      "case_id": "GOLDEN-GENERATION-HARD-RULES-NOT-REVIEW-ONLY-001",
+      "protects": "generation_hard_rules_not_review_only",
+      "expectation": "产品替换、旧产品清除、尺寸、质感、换脸、包装、字幕水印和原始首帧规则必须带有 GENERATION_HARD_RULES_V1 并在授权阶段检查，不能只留在审核报告。"
+    },
+    {
+      "case_id": "GOLDEN-COMPACT-GENERATION-LOCKS-001",
+      "protects": "compact_prompt_preserves_generation_locks",
+      "expectation": "compact_v1 只能压缩叙事铺陈，不能覆盖或删除产品、身份、包装、原产品清除、原图连续性和字幕水印硬锁。"
+    },
+    {
+      "case_id": "GOLDEN-FEEDBACK-WRITEBACK-001",
+      "protects": "user_feedback_writeback_required_before_retry",
+      "expectation": "用户指出的错误先写入 correction_memory，下一次 Prompt 逐字携带适用纠错并绑定记忆哈希；同一失败请求指纹不得盲重试。"
+    },
+    {
+      "case_id": "GOLDEN-APPROVED-FRAME-PROMOTION-001",
+      "protects": "user_approved_image_promotes_to_canonical",
+      "expectation": "QA 通过候选只有在完整图库取得 user_approved 且字节哈希一致后，才能由 promote 命令写入 approved_generation_first_frame；失败或部分候选永不晋级。"
+    },
+    {
+      "case_id": "GOLDEN-COMMERCIAL-CLEARANCE-NONBLOCKING-001",
+      "protects": "commercial_clearance_is_nonblocking",
+      "expectation": "commercial_release 的素材权利元数据不再阻断 Prompt 编译、生图、结构 QA 或 DOCX 导出；产品和用户批准等质量合同独立生效。"
+    },
+    {
+      "case_id": "GOLDEN-AGENT-ORCHESTRATOR-ONLY-001",
+      "protects": "agent_is_orchestrator_not_prompt_author",
+      "expectation": "Agent 只传输 canonical Prompt 和哈希绑定的参考图，不重新概括或删减知识库规则；缺硬规则的文本在授权阶段直接失败。"
+    },
+    {
+      "case_id": "GOLDEN-LEGACY-CORRECTION-NORMALIZATION-001",
+      "protects": "legacy_correction_rules_are_normalized_before_generation",
+      "expectation": "历史 all_frames、packaging_visible_frames 等规则在读取/迁移时转成 canonical scope/instruction/active，并进入实际生图 Prompt；旧字段不能使反馈失效。"
+    },
+    {
+      "case_id": "GOLDEN-SHOT-REPAIR-LANE-001",
+      "protects": "shot_repair_does_not_recompile_global_pack",
+      "expectation": "单镜 SRC/ADD 返工只生成 review/shot-retries 下的局部 Prompt 与回执，不改写其他镜头的 generation_pack 或全局交付回执。"
     }
   ]
 }

@@ -282,7 +282,7 @@ Source intake 分支统一使用 `source-intake-handoff-v1.0`。文线必须包�
           "source_scale_role": "pose_only_incompatible_scale",
           "anchor": {
             "type": "index_finger_mid",
-            "expected_ratio": [3.5, 4.0],
+            "expected_ratio": [4.0, 4.4],
             "evidence": "产品与接触食指同景深，完整可重建宽度按食指中段复核"
           }
         },
@@ -410,6 +410,15 @@ Source intake 分支统一使用 `source-intake-handoff-v1.0`。文线必须包�
 每只 `box_id` 都必须各有 `front/side/top` 三行；完全看不见也写 `visibility_state=hidden`、`visible_extent=none` 与真实遮挡/出框原因。包装 `qa_status=approved` 不能单独放行。每个可见或部分遮挡面必须附原尺寸候选裁切、绑定 DOCX 正文批准图的 asset id/父图哈希/裁切坐标、母版真实哈希、`project_package_master.py` 产生的投影 manifest 路径与真实哈希、逐个可见图案/文字检查点，以及文字、方向、跨棱登记、遮挡范围、模型重绘和意外缺块结论。投影 manifest 内 candidate/master/output 哈希、目标四边形、遮挡 mask、`projection_method=homography` 与 `model_redraw_used=false` 必须和本次成品一致；任何缺项、额外项、非 `matched`、哈希不一致或只写“已通过”没有证据，均阻断该整张图进入 Word。
 
 `source_units` 只允许保存原片 `SRC…`；按吃食计数、黄油脆丝棒纯手掰开或用户明确要求补入的新镜头写入 `inserted_units`，使用独立 `ADD…`，不得虚构原片时间：
+
+每个需要独立生图的 `source_units[]` / `inserted_units[]` 还必须各自携带 `exact_first_frame_generation_contract`。它只描述该 unit 的精确首帧，不覆盖所属 S 的后续动作或 terminal `product_state`：
+
+- `product_visibility=present`：逐 unit 记录 `visible_target_product_count`、源帧可见库存/容器、unit 级 `product_state` 与绑定该 unit 原帧的像素计划；授权必须传 `--unit-id`，产品参考与适用 QA 不得省略。
+- `product_visibility=absent` 描述目标首帧无目标产品，不等于原帧必然无旧产品。若 `source_observation.product_visible=false/count=0`，固定 `product_edit_required=false`；若原帧有旧产品或旧产品印刷袋，必须记录真实正数、设置 `product_edit_required=true`，包装可见时再设 `source_product_action=neutralize_to_non_product_carrier`。两种情况都固定 `visible_target_product_count=0`、`product_reference_inputs_required=false`、`pixel_plan_applicability=not_applicable_product_absent`：不加载目标大福参考、不做大福尺寸/表皮/内馅 QA，但对中和编辑仍需 `product` QA，证明旧产品已消失且未提前生成目标产品。该豁免不删除视频后续产品动作、叙事、声音或 terminal state。
+- 同一 S 内多个 SRC/ADD 必须分别哈希绑定各自源帧、Prompt、授权和结果。镜头级 12 颗/三盒等后续状态不得覆盖两托盘 16 颗或手持 1+托盘 9 等 unit 原帧事实；`absent` 也不得作为隐藏原帧已有产品的绕过标记。
+- 当 unit 精确首帧合同锁定 `product_visibility=absent` 与 `visible_target_product_count=0` 时，同一 S 的 `hard_constraints` 及该 unit 的 `delivery_asset_roles` 不得继续正向要求印刷产品包装、可见目标产品或旧数量/阵列。发现这种跨层旧文污染必须报 `EXACT_FIRST_FRAME_STALE_SHOT_TEXT_CONFLICT` 并停止 Prompt 编译与生图授权；只有明确写成移除/中和旧产品并保持目标0可见的描述才兼容。
+- `record-result` 必须使用授权回执中的同一 unit 精确首帧合同决定 QA 范围。`product_visibility=absent` 时，镜头后续 terminal `packaging_lock`、`count`、`instance_lock` 与 `arrangement_lock` 不得重新启用目标产品包装几何、布局连续、库存变化、尺度、表皮、内馅或终点 QA；仍要求构图、源帧血缘和适用人物身份。若该 unit 因原帧有旧产品而以 `requested_edits` 请求 `product` 中和，结果还必须提交 `product=true` 与非空证据，证明旧产品/印刷已清零且目标首帧可见产品数为0。
+- 显式release迁移必须把 `review/image-generation-requests`、`review/image-generation-qa`、`review/image-generation-prompts`、`images/current_release` 与其他候选/批准目录视为旧执行产物并从新活动副本移除，同时清空每个 unit 的授权、结果、候选、批准字段。仍需保留的 canonical 绝对路径必须从旧项目根目录确定性重绑到新项目根目录；旧项目路径只能存在于允许的迁移/历史审计文件中，不得留在活动 shot contract。
 
 ```json
 {

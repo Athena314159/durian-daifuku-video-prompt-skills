@@ -44,6 +44,7 @@ DIRECT_DELIVERY_TYPES = {
     "word_extracted_frame",
     "generated_result",
 }
+NO_GENERATION_MODE = "no_generation_prompt_docx_alignment"
 
 
 def sha256(path: Path) -> str:
@@ -57,6 +58,76 @@ def sha256(path: Path) -> str:
 def resolve_path(raw: str, project_root: Path) -> Path:
     path = Path(raw).expanduser()
     return path if path.is_absolute() else project_root / path
+
+
+def audit_no_generation_plan(plan: dict[str, Any], project: dict[str, Any], project_root: Path, stage: str) -> int:
+    """Audit formal no-generation references without inventing gallery approval."""
+    errors: list[str] = []
+    binding = plan.get("contract_binding") if isinstance(plan.get("contract_binding"), dict) else {}
+    lock = project.get("skill_release_lock") if isinstance(project.get("skill_release_lock"), dict) else {}
+    expected_binding = {"bundle_release_id": lock.get("bundle_release_id"), "prompt_authoring_contract": lock.get("prompt_authoring_contract"), "product_profile": project.get("product_profile")}
+    if any(binding.get(key) != value for key, value in expected_binding.items()):
+        errors.append("no-generation asset_reuse_plan.contract_binding 与当前项目不一致")
+    contract_path = project_root / "planning" / "no_generation_prompt_docx_alignment_contract.json"
+    try:
+        contract = json.loads(contract_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        contract = {}
+        errors.append("缺少或无法解析 no-generation DOCX 合同")
+    if contract.get("schema_version") != "no-generation-prompt-docx-alignment-v1.0":
+        errors.append("no-generation DOCX 合同 schema 不匹配")
+    if contract.get("approved_target_frame_count") != 0:
+        errors.append("no-generation 合同批准目标帧数量必须为0")
+    refs = contract.get("references") if isinstance(contract.get("references"), list) else []
+    inventory = plan.get("inventory") if isinstance(plan.get("inventory"), list) else []
+    decisions = plan.get("shot_decisions") if isinstance(plan.get("shot_decisions"), list) else []
+    expected_owners = [str(item.get("owner_unit_id")) for item in refs if isinstance(item, dict)]
+    actual_owners = [str(item.get("owner_unit_id")) for item in inventory if isinstance(item, dict)]
+    if actual_owners != expected_owners:
+        errors.append("no-generation inventory owner 顺序必须与合同参考顺序一致")
+    allowed_roles = {"legacy_composition_reference", "legacy_rejected_example", "exact_source_reuse"}
+    for index, item in enumerate(inventory):
+        if not isinstance(item, dict):
+            errors.append(f"no-generation inventory[{index}] 必须为对象")
+            continue
+        owner = item.get("owner_unit_id") or f"inventory[{index}]"
+        if item.get("asset_role") not in allowed_roles:
+            errors.append(f"{owner} asset_role 不属于 no-generation 允许角色")
+        if item.get("approval_status") != "audit_only" or item.get("approved") is not False:
+            errors.append(f"{owner} 必须保持 audit_only 且 approved=false")
+        raw_path = item.get("path")
+        path = resolve_path(raw_path, project_root) if isinstance(raw_path, str) else None
+        if path is None or not path.is_file():
+            errors.append(f"{owner} 参考文件不可访问")
+            continue
+        actual = sha256(path)
+        if item.get("sha256") != actual:
+            errors.append(f"{owner} SHA-256 与文件不一致")
+        try:
+            with Image.open(path) as image:
+                width, height = image.size
+            if width * 16 != height * 9:
+                errors.append(f"{owner} 不是独立9:16图")
+        except Exception as exc:
+            errors.append(f"{owner} 不是可读图片：{exc}")
+    for decision in decisions:
+        if not isinstance(decision, dict):
+            errors.append("no-generation shot_decision 必须为对象")
+            continue
+        if decision.get("decision") != "omit" or decision.get("selected_asset_ids"):
+            errors.append(f"{decision.get('shot_id')} no-generation 必须 omit 且 selected_asset_ids 为空")
+    summary = plan.get("summary") if isinstance(plan.get("summary"), dict) else {}
+    if summary.get("expected_word_image_count") != len(refs):
+        errors.append("no-generation expected_word_image_count 必须等于合同 reference_count")
+    if summary.get("approved_target_frame_count") != 0:
+        errors.append("no-generation summary.approved_target_frame_count 必须为0")
+    if errors:
+        print(f"资产复用审核阻断：{len(errors)}项")
+        for item in errors:
+            print(f"- {item}")
+        return 1
+    print(f"no-generation 资产复用审核通过：{len(refs)}张合同参考图，0张批准目标帧；stage={stage}，不要求 gallery user approval。")
+    return 0
 
 
 def main() -> int:
@@ -90,6 +161,8 @@ def main() -> int:
         project: dict[str, Any] = {}
     else:
         project = json.loads(project_path.read_text(encoding="utf-8"))
+    if project.get("document_delivery_mode") == NO_GENERATION_MODE:
+        return audit_no_generation_plan(plan, project, project_root, args.stage)
     release_lock = project.get("skill_release_lock") if isinstance(project.get("skill_release_lock"), dict) else {}
     binding = plan.get("contract_binding") if isinstance(plan.get("contract_binding"), dict) else {}
     expected_binding = {

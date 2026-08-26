@@ -16,10 +16,34 @@ from PIL import Image, ImageDraw
 SKILL_DIR = Path(__file__).resolve().parent.parent
 RELEASE_PATH = SKILL_DIR / "references" / "skill-release.json"
 RATIO_RANGES = {
-    "index_finger_mid": (3.5, 4.0),
-    "palm": (0.75, 0.80),
+    "index_finger_mid": (4.0, 4.4),
+    "palm": (0.88, 0.96),
     "mouth_width": (1.4, 1.6),
 }
+
+HAND_INTERACTION_STATES = {
+    "held",
+    "pressed",
+    "global_stretch",
+    "opening_window_seed",
+    "opening_window_established",
+    "pre_break",
+    "break",
+    "hand_torn_cross_section",
+    "early_cohesive_opening",
+    "two_halves_display",
+    "bitten",
+}
+
+
+def requires_hand_scale_relationship(shot: dict[str, Any]) -> bool:
+    state = shot.get("product_state") if isinstance(shot.get("product_state"), dict) else {}
+    character = shot.get("character") if isinstance(shot.get("character"), dict) else {}
+    return (
+        state.get("state") in HAND_INTERACTION_STATES
+        or shot.get("visual_type") == "person_eating"
+        or character.get("hands_only") is True
+    )
 
 
 def sha256_file(path: Path) -> str:
@@ -87,6 +111,10 @@ def prepare(args: argparse.Namespace) -> dict[str, Any]:
     declared_anchor = scale_lock.get("anchor") if isinstance(scale_lock.get("anchor"), dict) else {}
     if declared_anchor.get("type") != anchor_type:
         raise ValueError("anchor-type must exactly match product_state.scale_lock.anchor.type")
+    if requires_hand_scale_relationship(shot) and anchor_type == "approved_scene_scale_master":
+        raise ValueError(
+            "DAIFUKU_SCENE_ONLY_SCALE_ANCHOR_FORBIDDEN: a scene-only or blank scale master cannot authorize a hand-interaction shot"
+        )
     anchor_box = [int(value) for value in args.anchor_bbox]
     if len(anchor_box) != 4:
         raise ValueError("anchor-bbox must be x y width height")
@@ -213,7 +241,7 @@ def main() -> int:
     parser.add_argument("--shot-id", required=True)
     parser.add_argument("--anchor-type", required=True, choices=(*RATIO_RANGES.keys(), "known_container_dimension", "approved_scene_scale_master"))
     parser.add_argument("--anchor-bbox", required=True, type=int, nargs=4, metavar=("X", "Y", "W", "H"))
-    parser.add_argument("--selected-ratio", type=float, default=3.75)
+    parser.add_argument("--selected-ratio", type=float, default=4.2)
     parser.add_argument("--anchor-physical-cm", type=float)
     parser.add_argument("--target-width-px", type=int)
     parser.add_argument("--target-center", required=True, type=int, nargs=2, metavar=("X", "Y"))

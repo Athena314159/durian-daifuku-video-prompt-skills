@@ -33,6 +33,7 @@ description: Analyze a user-supplied source video, hand off its spoken script an
 - 换脸、换产品、换包装、换场景、补图、重拆镜或重做 Word 前，先做当前项目的最小资产盘点。只有用户要求复用/点名历史项目，或当前项目缺必要资产时，才扩展建立跨项目 `planning/asset_reuse_plan.json` 并运行 `audit_asset_reuse.py`。
 - 用户反馈“脸没换过来、像把头装在身体上、头太小、越改越脏、改好后放回分镜、Prompt 不足 3000 字、Word 与 TXT 接不上”或同类症状时，完整读取 [references/remake-recovery-playbook.md](references/remake-recovery-playbook.md)，先归类根因再返工。
 - 修改本 Skill 或导演 Skill 前，必须执行 `$jimeng-video-remix-director/references/skill-change-governance.md` 的候选、版本、黄金回归、发布与回滚门；禁止直接修改 live Skill。
+- 生图硬规则必须随实际请求提交，不能停在审核层；提取结果交给 paired director 后，遵循 [生图执行合同](references/generation-execution-contract.md) 的 Prompt 全文、参考图哈希、反馈写回和用户批准晋级合同。
 
 不要把待审核产品规范称为正式批准版。内部可以使用状态编号做路由，用户交付中的“产品形态”必须使用中文。
 
@@ -283,7 +284,7 @@ description: Analyze a user-supplied source video, hand off its spoken script an
 
 两种模式互斥。启用 `relative_pixel_resize` 时，`15 cm`、`12 cm` 和 `0.80` 只保留为产品元数据，不得再写进本轮生图硬约束或作为画面投影尺寸验收值；不得同时要求“相对原图缩放百分比”和“按其他镜头/实体比例校正画面大小”。其他镜头只能承担身份、材质、形状、包装印刷或结构职责，绝不能承担当前镜头的视觉尺寸职责。用户最新的明确尺寸指令覆盖旧轮次与项目默认值。
 
-原视频中的旧食品和旧包装默认只是动作/位置参考。一旦规格与目标不同，写入 `source_scale_role=pose_only_incompatible_scale`，不得同时要求完全保持原产品边界框/指间距/包装堆放密度又执行目标实体尺寸。画面不出现外盒时不写 `12:15=0.80`；目标包装无法按真实规格容纳进原纸箱/桌面区域时，触发 `SOURCE_CONTAINER_CAPACITY_CONFLICT` 并调整容器、数量或景别，不得缩放目标包装强塞。
+原视频中的旧食品和旧包装默认只是动作/位置参考。一旦规格与目标不同，写入 `source_scale_role=pose_only_incompatible_scale`，不得同时要求完全保持原产品边界框/指间距/包装堆放密度又执行目标实体尺寸。画面不出现外盒时不写 `12:15=0.80`；目标包装不适配原容器时先按同景深锚点、固定内容规格、数量与布局推断并调整容器、数量或景别，不得缩放目标包装强塞。只有声明场景硬尺寸上限且合理方案全部无解时，才报 `SOURCE_CONTAINER_CAPACITY_CONFLICT` 并停止生成。
 
 百分比返工必须记录：唯一源帧、每类对象的原始边界框、目标线性倍率、保持 `1.00` 的不变量和结果边界框。只有执行了确定性的蒙版几何变换并完成像素测量，才能声称“精确缩小 X%”；纯生成式编辑只能写“目标倍率约为 X”，并须因明显过缩、欠缩、镜头缩放、人物比例变化或物体拓扑改变而拒收，禁止伪报精确百分比。
 

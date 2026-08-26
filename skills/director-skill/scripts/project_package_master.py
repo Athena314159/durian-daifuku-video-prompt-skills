@@ -19,7 +19,7 @@ from datetime import datetime
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter
 
 
 def sha256(path: Path) -> str:
@@ -92,6 +92,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Project approved package artwork onto one visible box face.")
     parser.add_argument("--candidate", required=True, type=Path, help="Candidate image containing approved box geometry.")
     parser.add_argument("--master", required=True, type=Path, help="Approved flat front/side/top face master.")
+    parser.add_argument("--master-source-quad", type=parse_quad, help="TL,TR,BR,BL region inside a perspective-composite master; required for carton front/side assets.")
     parser.add_argument("--quad", required=True, type=parse_quad, help="TL,TR,BR,BL target corners as eight comma-separated values.")
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--face", required=True, choices=("front", "side", "top"))
@@ -118,12 +119,18 @@ def main() -> int:
 
     candidate = Image.open(candidate_path).convert("RGBA")
     master = Image.open(master_path).convert("RGBA")
-    source_corners = [
+    source_corners = args.master_source_quad or [
         (0.0, 0.0),
         (float(master.width - 1), 0.0),
         (float(master.width - 1), float(master.height - 1)),
         (0.0, float(master.height - 1)),
     ]
+    if args.master_source_quad:
+        if any(x < 0 or y < 0 or x >= master.width or y >= master.height for x, y in source_corners):
+            parser.error("master-source-quad must stay inside the master image")
+        source_mask = Image.new("L", master.size, 0)
+        ImageDraw.Draw(source_mask).polygon(source_corners, fill=255)
+        master.putalpha(source_mask)
     forward = homography(source_corners, args.quad)
     coefficients = pil_inverse_coefficients(forward)
     projected = master.transform(
@@ -164,12 +171,13 @@ def main() -> int:
 
     manifest_path = args.manifest.expanduser().resolve() if args.manifest else output_path.with_suffix(output_path.suffix + ".projection.json")
     manifest = {
-        "schema_version": "package-master-projection-v1.0",
+        "schema_version": "package-master-projection-v1.1",
         "created_at": datetime.now().astimezone().replace(microsecond=0).isoformat(),
         "face": args.face,
         "projection_method": "homography",
         "candidate": {"path": str(candidate_path), "sha256": sha256(candidate_path), "size": list(candidate.size)},
         "master": {"path": str(master_path), "sha256": sha256(master_path), "size": list(master.size)},
+        "master_source_quad_tl_tr_br_bl": [[round(x, 4), round(y, 4)] for x, y in source_corners],
         "visible_mask": None if mask_path is None else {"path": str(mask_path), "sha256": sha256(mask_path)},
         "target_quad_tl_tr_br_bl": [[round(x, 4), round(y, 4)] for x, y in args.quad],
         "opacity": args.opacity,

@@ -526,6 +526,14 @@ def derive_locked_contract(shot_map: dict[str, Any], errors: list[str]) -> dict[
     missing_fields = [field for field in SHOT_MAP_HASH_FIELDS if field not in shot_map]
     if missing_fields:
         errors.append(f"locked shot map missing semantic fields: {missing_fields}")
+    expected_semantic_hash = semantic_shot_map_sha256(shot_map)
+    if shot_map.get("semantic_payload_version") != "locked-shot-map-six-field-v1":
+        errors.append("locked semantic_payload_version must equal locked-shot-map-six-field-v1")
+    embedded_semantic_hash = shot_map.get("semantic_sha256")
+    if not isinstance(embedded_semantic_hash, str) or not SHA256_RE.fullmatch(embedded_semantic_hash):
+        errors.append("locked semantic_sha256 must be a lowercase 64-character SHA-256")
+    elif embedded_semantic_hash != expected_semantic_hash:
+        errors.append("locked semantic_sha256 does not match the required six-field semantic payload")
     source_duration = shot_map.get("source_duration_seconds")
     if not numeric(source_duration) or source_duration <= 0:
         errors.append("locked source_duration_seconds must be positive")

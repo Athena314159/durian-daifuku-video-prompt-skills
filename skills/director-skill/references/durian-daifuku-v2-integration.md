@@ -37,7 +37,7 @@ python3 <skill-dir>/scripts/init_project.py \
     "source_scale_role": "pose_only_incompatible_scale",
     "anchor": {
       "type": "index_finger_mid",
-      "expected_ratio": [3.5, 4.0],
+      "expected_ratio": [4.0, 4.4],
       "evidence": "产品与接触食指同景深，完整可重建宽度按食指中段复核"
     }
   },
@@ -79,7 +79,7 @@ python3 <skill-dir>/scripts/init_project.py \
 
 ## 尺度
 
-- 手持/撕拉优先使用同景深食指中段，完整或可重建宽度为 3.5–4.0 指宽。
+- 手持/撕拉优先使用同景深食指中段，完整或可重建宽度为 4.0–4.4 指宽；若使用掌宽则为 0.88–0.96。结果至少两个同景深手部锚点同时通过，空白/纯场景母版不能授权手部互动镜头。
 - 人物咬后另用嘴宽复核。
 - 盘装镜必须使用已知盘子内径或批准的同场景尺度母资产；未知盘面外观不能证明 7 厘米。
 
@@ -98,7 +98,7 @@ python3 <skill-dir>/scripts/prepare_daifuku_pixel_preflight.py \
   --evidence "同景深食指中段的可见横向宽度"
 ```
 
-脚本以本地像素运算生成 `review/scale-guides/<shot>-daifuku-scale-guide.png` 与同名 JSON，不消耗任何生图调用。逐镜 `scale_lock.pixel_plan` 必须包含并通过：原帧路径与 SHA-256、原帧尺寸、画面内可复算的锚点标注框、允许比例与选定比例、目标宽高、宽度容差、`bbox_xywh`、产品状态/锚点/产品合同/release 绑定、几何引导图路径/哈希/角色及 manifest 路径。盘装镜改用 `known_container_dimension` 或 `approved_scene_scale_master`，不得拿未知盘面外观猜大小。
+脚本以本地像素运算生成 `review/scale-guides/<shot>-daifuku-scale-guide.png` 与同名 JSON，不消耗任何生图调用。逐镜 `scale_lock.pixel_plan` 必须包含并通过：原帧路径与 SHA-256、原帧尺寸、画面内可复算的锚点标注框、允许比例与选定比例、目标宽高、宽度容差、`bbox_xywh`、产品状态/锚点/产品合同/release 绑定、几何引导图路径/哈希/角色及 manifest 路径。盘装镜改用 `known_container_dimension` 或 `approved_scene_scale_master`，不得拿未知盘面外观猜大小；但 `approved_scene_scale_master` 绝不能单独授权手持、按压、咬食或撕拉。手部互动成品另需哈希绑定的 `durian-daifuku-scale-relationship-qa-v1.0`，至少两个物理锚点同时通过，否则停止批准。
 
 调用生图工具时必须同时提供精确原帧和该几何引导图；Prompt 明说引导图仅约束目标椭圆的位置与尺寸，不继承青色轮廓、十字、标签、文字或其他覆盖层。任一像素计划字段缺失、算术不一致、目标框越界或哈希变化时触发 `DAIFUKU_PIXEL_PREFLIGHT_*`/`DAIFUKU_SCALE_GUIDE_*` 并在调用前阻断。一个有效计划只允许一次初始生成；尺寸失败后先改变可审计计划或选择确定性局部编辑，禁止原样盲重跑。
 
@@ -142,3 +142,11 @@ python3 <skill-dir>/scripts/prepare_daifuku_pixel_preflight.py \
 - `instance_lock` 保存原片数量、目标数量、变化事件、稳定实例 ID、独立形态变体、共同约7厘米尺寸等级和接触形变。原片两颗/三颗无事件时必须等数替换；同尺寸不允许实例克隆。
 - `arrangement_lock` 保存 layout/container/inventory-stage、实例顺序、上一布局和拿取事件。拿起一颗后容器库存严格减一，余下相对拓扑保持；包装/独立袋须自然错位，禁止完美网格、等距和全平行。
 - 所有结果提交 `topology_qa` 与 `instance_qa`；适用镜头再提交 `continuity_qa`。大坑假咬口、数量少替换、实例克隆、过度整齐或拿取后库存不减均整张拒收并返回精确原图。
+
+## 运输纸箱与外皮像素门
+
+- 精确原帧先登记 `source_package_inventory`，包装存在性、层级和数量不能由目标 Prompt 擅自隐藏或添加。
+- 出现 `shipping_carton` 时先运行 `prepare_shipping_carton_capacity_plan.py`。纸箱尺寸可依据原片容器 bbox、同景深锚点、固定15×15×4.5厘米零售盒数量与布局调整；只有在明确场景硬尺寸上限内无任何可行布局时，返回 `SOURCE_CONTAINER_CAPACITY_CONFLICT` 并停止生成。
+- 运输箱复合透视母版的正面/侧面使用 `project_package_master.py --master-source-quad ...` 分面校正，顶部内侧仅作结构参考。
+- 成图后运行 `audit_daifuku_surface.py` 并把报告通过 `image_generation_gate.py record-result --surface-qa` 绑定；灰棕/黑褐石头色与砂石水泥颗粒不允许人工绕过。
+- lint 同时交叉检查叙事职责、结构化终点、内馅物理和声源：`opening_window_seed` 不得保留两半/断面目的，`plated` 不得沿用互补两半，无独立画外音证据不得发明旁白，“爆浆”口播不得视觉液态化。

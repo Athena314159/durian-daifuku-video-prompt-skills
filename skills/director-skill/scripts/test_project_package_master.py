@@ -71,7 +71,7 @@ def main() -> None:
 
         manifest_path = output_path.with_suffix(".png.projection.json")
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        assert manifest["schema_version"] == "package-master-projection-v1.0"
+        assert manifest["schema_version"] == "package-master-projection-v1.1"
         assert manifest["projection_method"] == "homography"
         assert manifest["face"] == "front"
         assert manifest["model_redraw_used"] is False
@@ -79,6 +79,19 @@ def main() -> None:
         assert manifest["master"]["sha256"]
         assert manifest["visible_mask"]["sha256"]
         assert manifest["output"]["sha256"]
+
+        composite_output = root / "composite-region.png"
+        composite = subprocess.run(
+            [
+                sys.executable, str(SCRIPT), "--candidate", str(candidate_path), "--master", str(master_path),
+                "--master-source-quad", "10,10,110,10,110,105,10,105", "--quad", "50,40,280,55,260,210,65,195",
+                "--face", "front", "--lighting-strength", "0", "--edge-feather", "0", "--output", str(composite_output),
+            ],
+            text=True, capture_output=True, check=False,
+        )
+        assert composite.returncode == 0, composite.stdout + composite.stderr
+        composite_manifest = json.loads(composite_output.with_suffix(".png.projection.json").read_text(encoding="utf-8"))
+        assert composite_manifest["master_source_quad_tl_tr_br_bl"] == [[10.0, 10.0], [110.0, 10.0], [110.0, 105.0], [10.0, 105.0]]
 
     print("PACKAGE MASTER PROJECTION TEST PASSED")
 

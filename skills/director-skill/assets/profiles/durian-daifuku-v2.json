@@ -3,10 +3,10 @@
   "profile_id": "durian-daifuku-v2",
   "product_family": "durian_daifuku",
   "name": "约7厘米手工榴莲冰皮大福",
-  "version": 6,
+  "version": 7,
   "supersedes_profile": "durian-daifuku-v1",
   "immutable_traits": [
-    "完整或可重建产品的标准直径约7厘米、最大不超过7.5厘米；人物手与产品同景深时，完整宽度约为成年食指中段宽度的3.5至4倍并明显小于整只手掌",
+    "完整或可重建产品的标准直径约7厘米、最大不超过7.5厘米；人物手与产品同景深时，完整宽度约为成年食指中段宽度的4.0至4.4倍，约为成年手掌横向宽度的0.88至0.96；手部互动结果必须用至少两个同景深物理锚点复核",
     "原视频旧食品只承担动作、位置和遮挡语义，不承担目标产品尺度；靠近镜头、盘子、人物面部或双手运动时物理体量保持一致",
     "完整大福在盒内、盘中和手持时共用几何身份DF2-ROUND-7CM-001：连续圆弧、饱满略扁圆；方形盒体或方格内托只可承托和遮挡，不得把直边、直角、切角或压模传给产品",
     "完整冰皮为暖奶白、米白至浅象牙白，厚约1.5至2.5毫米，连续细腻、平滑、基本不透明",
@@ -23,10 +23,13 @@
     "mode": "physical_consistency",
     "diameter_cm": 7.0,
     "maximum_diameter_cm": 7.5,
-    "finger_width_ratio": [3.5, 4.0],
-    "palm_width_ratio": [0.75, 0.8],
+    "finger_width_ratio": [4.0, 4.4],
+    "palm_width_ratio": [0.88, 0.96],
     "default_source_scale_role": "pose_only_incompatible_scale",
-    "required_anchor_types": ["index_finger_mid", "palm", "mouth_width", "known_container_dimension", "approved_scene_scale_master"]
+    "required_anchor_types": ["index_finger_mid", "palm", "mouth_width", "known_container_dimension", "approved_scene_scale_master"],
+    "hand_interaction_minimum_result_anchor_count": 2,
+    "hand_interaction_scene_only_anchor_forbidden": true,
+    "hand_interaction_anchor_conflict_tolerance": 0.1
   },
   "shape_contract": {
     "geometry_identity_id": "DF2-ROUND-7CM-001",
@@ -109,13 +112,23 @@
         "back_nutrition": "DF2-PACK-RETAIL-BACK-NUTRITION-01",
         "side_label": "DF2-PACK-RETAIL-SIDE-LABEL-01",
         "side_brand": "DF2-PACK-RETAIL-SIDE-BRAND-01"
+      },
+      "shipping_carton": {
+        "front": "DF2-PACK-CARTON-FRONT-01",
+        "side": "DF2-PACK-CARTON-SIDE-01",
+        "top_interior": "DF2-PACK-CARTON-TOP-INTERIOR-01"
       }
     },
     "shipping_carton_policy": {
-      "global_master_available": false,
-      "requires_project_specific_user_approved_master": true,
-      "required_metadata": ["approved", "user_approved", "packaging_level", "visible_face", "sha256"],
-      "forbidden": ["根据零售盒自行扩写运输箱图案", "笑脸榴莲图标", "凭空品牌字样", "未获用户批准的绿色或米色纸箱设计"]
+      "global_master_available": true,
+      "master_mode": "perspective_composite_with_rectified_regions",
+      "dimension_mode": "model_inferred_from_source_anchor_contents_and_layout",
+      "capacity_plan_required": true,
+      "capacity_conflict_code": "SOURCE_CONTAINER_CAPACITY_CONFLICT",
+      "fixed_content_dimensions": {"retail_outer_box_cm": [15.0, 15.0, 4.5], "daifuku_diameter_cm": 7.0, "daifuku_maximum_diameter_cm": 7.5},
+      "resize_priority": "resize_shipping_carton_never_shrink_contents",
+      "required_metadata": ["approved", "user_approved", "packaging_level", "visible_face", "sha256", "source_region"],
+      "forbidden": ["根据零售盒自行扩写运输箱图案", "笑脸榴莲图标", "凭空品牌字样", "把复合透视图整幅当作单面贴图", "为适配旧容器缩小零售盒或大福"]
     },
     "independent_pouch_capture_boundary": {
       "allowed_inheritance": ["透明单颗膜袋", "棕色内托", "正面黑绿文字与可见布局", "袋体比例、封边与侧视厚度"],
@@ -132,7 +145,9 @@
     "base": "continuous_smooth_opaque_warm_milky_white",
     "powder_layer": "ultra_fine_sparse_uneven_unresolvable_rice_flour_haze",
     "powder_visibility": "visible_as_soft_powder_frost_in_oblique_light",
-    "forbidden": ["完全无粉的光滑面团", "可数白点", "粗粉团", "磨砂塑料纹", "包子褶", "收口纹", "毛孔", "蜂窝", "大片透黄"]
+    "pixel_qa_required": true,
+    "approved_color_reference_asset_id": "DF2-SURFACE-01",
+    "forbidden": ["完全无粉的光滑面团", "可数白点", "粗粉团", "磨砂塑料纹", "灰棕石头色", "黑褐色", "砂石或水泥高频颗粒", "包子褶", "收口纹", "毛孔", "蜂窝", "大片透黄"]
   },
   "filling_contract": {
     "color": "clean_warm_golden_yellow",
@@ -361,6 +376,51 @@
       "allowed_states": ["*"],
       "approved": true,
       "user_approved": true
+    },
+    {
+      "id": "DF2-PACK-CARTON-FRONT-01",
+      "source_path": "assets/product-references/durian-daifuku-v2/packaging/shipping-carton/user-open-carton-front-side-top.png",
+      "target_path": "source/references/durian-daifuku-v2/packaging/shipping-carton/user-open-carton-front-side-top.png",
+      "sha256": "9b2275e8660e6d4e5be83fc7581a07153e9e42ad2fdc9eca165c4ace27922b31",
+      "role": "shipping_carton_front_rectified_artwork",
+      "packaging_level": "shipping_carton",
+      "visible_face": "front",
+      "master_mode": "perspective_composite_with_rectified_region",
+      "source_region": {"quad_xy": [[471, 544], [1234, 447], [1216, 1016], [487, 1037]]},
+      "projection_required": true,
+      "allowed_states": ["*"],
+      "approved": true,
+      "user_approved": true
+    },
+    {
+      "id": "DF2-PACK-CARTON-SIDE-01",
+      "source_path": "assets/product-references/durian-daifuku-v2/packaging/shipping-carton/user-open-carton-front-side-top.png",
+      "target_path": "source/references/durian-daifuku-v2/packaging/shipping-carton/user-open-carton-front-side-top.png",
+      "sha256": "9b2275e8660e6d4e5be83fc7581a07153e9e42ad2fdc9eca165c4ace27922b31",
+      "role": "shipping_carton_side_rectified_artwork",
+      "packaging_level": "shipping_carton",
+      "visible_face": "side",
+      "master_mode": "perspective_composite_with_rectified_region",
+      "source_region": {"quad_xy": [[291, 514], [471, 544], [487, 1037], [304, 868]]},
+      "projection_required": true,
+      "allowed_states": ["*"],
+      "approved": true,
+      "user_approved": true
+    },
+    {
+      "id": "DF2-PACK-CARTON-TOP-INTERIOR-01",
+      "source_path": "assets/product-references/durian-daifuku-v2/packaging/shipping-carton/user-open-carton-front-side-top.png",
+      "target_path": "source/references/durian-daifuku-v2/packaging/shipping-carton/user-open-carton-front-side-top.png",
+      "sha256": "9b2275e8660e6d4e5be83fc7581a07153e9e42ad2fdc9eca165c4ace27922b31",
+      "role": "shipping_carton_top_interior_geometry_only",
+      "packaging_level": "shipping_carton",
+      "visible_face": "top_interior",
+      "master_mode": "perspective_composite_with_rectified_region",
+      "source_region": {"geometry_reference_only": true},
+      "projection_required": false,
+      "allowed_states": ["*"],
+      "approved": true,
+      "user_approved": true
     }
   ],
   "knowledge_seed": [
@@ -373,7 +433,7 @@
       "applies_to": {"product_profile": "durian-daifuku-v2"},
       "priority": 100,
       "approved": true,
-      "version": 6
+      "version": 7
     },
     {
       "id": "KB-DF2-OPENING-SEED-001",
@@ -384,7 +444,7 @@
       "applies_to": {"product_profile": "durian-daifuku-v2", "product_state": ["opening_window_seed"]},
       "priority": 110,
       "approved": true,
-      "version": 6
+      "version": 7
     }
   ],
   "updated_at": "2026-08-25T19:30:00+08:00"

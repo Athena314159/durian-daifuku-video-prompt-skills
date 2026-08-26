@@ -13,6 +13,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
+from correction_memory import normalize_memory
+
 
 SKILL_DIR = Path(__file__).resolve().parent.parent
 TEMPLATE_DIR = SKILL_DIR / "assets" / "project-template"
@@ -194,6 +196,17 @@ def migrate(project_dir: Path) -> Dict[str, Any]:
         project["product_mode"] = "replace_product" if project.get("product_profile") else "preserve_source_product"
     project["prompt_length_contract"] = normalized_migrated_prompt_contract
     write_json(project_path, project)
+
+    correction_path = project_dir / "library" / "correction_memory.json"
+    if correction_path.is_file():
+        correction, changed = normalize_memory(
+            load_json(correction_path),
+            project_id=str(project.get("project_id") or ""),
+            product_profile=str(project.get("product_profile") or ""),
+            style_profile=str(project.get("style_profile") or ""),
+        )
+        if changed:
+            write_json(correction_path, correction)
 
     source_path = project_dir / "source" / "source_manifest.json"
     source = deep_merge_defaults(load_json(TEMPLATE_DIR / "source" / "source_manifest.json"), load_json(source_path))

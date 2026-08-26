@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from init_project import PROFILES_DIR, RELEASE_MANIFEST_PATH, TEMPLATE_DIR, load_json, seed_product_knowledge_and_assets, write_json
+from correction_memory import normalize_memory
 
 
 UNAMBIGUOUS_STATES = {"whole", "held", "plated", "pressed", "bitten"}
@@ -24,6 +25,7 @@ LEGACY_AUDIT_ALLOWLIST = {
     Path("project.json"),
     Path("library/product_bible.json"),
     Path("review/migration_cleanup_receipt.json"),
+    Path("planning/skill_update_candidates.json"),
 }
 
 
@@ -139,8 +141,21 @@ def rewrite_current_product_binding(value: Any, current_release: str, key: str |
     if isinstance(value, str):
         if key in {"profile", "product_profile", "product_profile_id", "target_product_profile"} and value == LEGACY_PROFILE:
             return CURRENT_PROFILE
-        if key in {"bundle_release_id", "release_id", "skill_release"} and LEGACY_RELEASE_RE.fullmatch(value):
+        if key in {"bundle_release_id", "release_id", "skill_release", "release"} and LEGACY_RELEASE_RE.fullmatch(value):
             return current_release
+    return value
+
+
+def rebase_project_paths(value: Any, source_root: Path, target_root: Path) -> Any:
+    """Rebind retained canonical absolute paths to the non-destructive target copy."""
+    if isinstance(value, dict):
+        return {key: rebase_project_paths(item, source_root, target_root) for key, item in value.items()}
+    if isinstance(value, list):
+        return [rebase_project_paths(item, source_root, target_root) for item in value]
+    if isinstance(value, str):
+        source_text = str(source_root)
+        if value == source_text or value.startswith(source_text + "/"):
+            return str(target_root) + value[len(source_text):]
     return value
 
 
@@ -309,6 +324,15 @@ def migrate(source: Path, output: Path | None = None) -> Path:
             for unit in shot.get(unit_key) or []:
                 if isinstance(unit, dict):
                     unit["delivery_asset_ids"] = []
+                    for field in (
+                        "image_generation_authorization",
+                        "image_generation_result_receipt",
+                        "candidate_generation_first_frame",
+                        "approved_generation_first_frame",
+                    ):
+                        unit.pop(field, None)
+    shots = rewrite_current_product_binding(shots, release["bundle_release_id"])
+    shots = rebase_project_paths(shots, source, target)
     write_json(shot_path, shots)
 
     project_path = target / "project.json"
@@ -334,6 +358,17 @@ def migrate(source: Path, output: Path | None = None) -> Path:
     }
     write_json(project_path, project)
 
+    correction_path = target / "library" / "correction_memory.json"
+    if correction_path.is_file():
+        correction, changed = normalize_memory(
+            load_json(correction_path),
+            project_id=str(project.get("project_id") or ""),
+            product_profile=str(project.get("product_profile") or ""),
+            style_profile=str(project.get("style_profile") or ""),
+        )
+        if changed:
+            write_json(correction_path, correction)
+
     workflow_path = target / "planning" / "workflow_state.json"
     workflow = load_json(workflow_path)
     workflow["prompt_delivery"] = {
@@ -352,6 +387,8 @@ def migrate(source: Path, output: Path | None = None) -> Path:
         Path("prompts"),
         Path("review/prompt_delivery_receipt.json"),
         Path("review/image-generation-requests"),
+        Path("review/image-generation-qa"),
+        Path("review/image-generation-prompts"),
         Path("review/scale-guides"),
         Path("review/candidates"),
         Path("review/approved"),
@@ -368,8 +405,20 @@ def migrate(source: Path, output: Path | None = None) -> Path:
         Path("assets/candidates"),
         Path("assets/approved"),
         Path("assets/diagnostic-failures"),
+        Path("images/generated"),
+        Path("images/candidates"),
+        Path("images/approved"),
+        Path("images/current_release"),
         Path("planning/asset_reuse_plan.json"),
         Path("planning/product_continuity_lock.json"),
+        Path("planning/activation_receipt.json"),
+        Path("planning/locked_shot_map.json"),
+        Path("planning/packaging_migration_audit.json"),
+        Path("planning/pixel_preflight"),
+        Path("planning/workflow_state.json"),
+        Path("handoffs"),
+        Path("work/branches"),
+        Path("review/lint_report.json"),
         Path("library/product_bible_override_pending.json"),
         Path("legacy-release-artifacts"),
     )
@@ -391,6 +440,27 @@ def migrate(source: Path, output: Path | None = None) -> Path:
             remove_path(current)
             removed_paths.append(str(relative))
 
+    shutil.copy2(TEMPLATE_DIR / "planning" / "workflow_state.json", target / "planning" / "workflow_state.json")
+    fresh_workflow = load_json(target / "planning" / "workflow_state.json")
+    fresh_workflow.update(
+        {
+            "project_id": project.get("project_id"),
+            "current_stage": "migration_manual_rebind",
+            "execution_tier": project.get("execution_tier"),
+            "status": "blocked",
+            "blocked_by": ["rebuild_locked_shot_map", "rebuild_pixel_preflight", "reauthorize_generation_images"],
+            "prompt_delivery_authorized": False,
+            "compile_receipt": None,
+            "next_allowed_actions": ["rebuild_locked_shot_map", "audit_source_package_inventory", "rebuild_pixel_preflight", "issue_image_regeneration_handoff"],
+            "skill_versions": {
+                "bundle_release_id": release["bundle_release_id"],
+                "prompt_authoring_contract": release["prompt_authoring_contract"],
+                "product_profile": CURRENT_PROFILE,
+            },
+        }
+    )
+    write_json(target / "planning" / "workflow_state.json", fresh_workflow)
+
     intake_contract_path = target / "planning" / "source_intake_contract.json"
     if intake_contract_path.is_file():
         intake_contract = rewrite_current_product_binding(load_json(intake_contract_path), release["bundle_release_id"])
@@ -408,6 +478,24 @@ def migrate(source: Path, output: Path | None = None) -> Path:
         "product_profile": CURRENT_PROFILE,
     }
     write_json(target / "planning" / "asset_reuse_plan.json", fresh_reuse_plan)
+    # Controller-owned active planning files survive prompt-only/no-generation
+    # migration, so their explicit release fields and absolute project paths
+    # must be rebound. Historical branch handoffs are removed above and remain
+    # available only in the preserved source project.
+    rebound_controller_files: list[str] = []
+    for relative in (
+        Path("planning/controller_prompt_blueprints.json"),
+        Path("planning/revised_script_lock.json"),
+        Path("planning/no_generation_prompt_docx_alignment_contract.json"),
+        Path("planning/no_generation_prompt_docx_alignment_handoff.json"),
+    ):
+        current = target / relative
+        if not current.is_file():
+            continue
+        payload = rewrite_current_product_binding(load_json(current), release["bundle_release_id"])
+        payload = rebase_project_paths(payload, source, target)
+        write_json(current, payload)
+        rebound_controller_files.append(str(relative))
     write_json(
         target / "review" / "migration_cleanup_receipt.json",
         {
@@ -423,6 +511,7 @@ def migrate(source: Path, output: Path | None = None) -> Path:
             "active_approved_frames_unbound": True,
             "active_asset_reuse_plan_reset": True,
             "current_execution_basis_rebound_paths": rebound_directive_paths,
+            "controller_planning_rebound_paths": rebound_controller_files,
             "active_recursive_legacy_scan": "pending",
         },
     )

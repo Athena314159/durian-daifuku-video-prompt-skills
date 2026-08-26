@@ -16,9 +16,9 @@ description: >-
 
 按用户当前要求选最小足够档位，不默认跑完所有交付链：
 
-- `source_intake`：用户给了原视频但尚未提供/锁定新版口播，或只说“跑一下/先分析”而没有明确要求完整首帧、Prompt 与 Word 时启用。图线只做原片视觉清单与真实首帧，文线先提取原片可编辑口播；不换品、不生图、不编最终 Prompt、不导出 Word。图线与总控必须把已核验真实首帧直接嵌入各自用户可见任务，不能只报 handoff、JSON 或文件路径；文线口播一完成，总控同样立即贴出可复制修改的正文。两路阶段成果谁先完成就先展示，互不等待，也不等待产品、人物或商业授权输入。
+- `source_intake`：用户给了原视频但尚未提供/锁定新版口播，或只说“跑一下/先分析”而没有明确要求完整首帧、Prompt 与 Word 时启用。图线只做原片视觉清单与真实首帧，文线先提取原片可编辑口播；不换品、不生图、不编最终 Prompt、不导出 Word。图线与总控必须把已核验真实首帧直接嵌入各自用户可见任务，不能只报 handoff、JSON 或文件路径；文线口播一完成，总控同样立即贴出可复制修改的正文。两路阶段成果谁先完成就先展示，互不等待，也不等待产品或人物输入。
 - `diagnose_only`：只读取失败图、原帧、当镜 Prompt 和产品规范，定位根因与修正点。不转写、不全量抽帧、不生图、不编译长 Prompt、不导出 Word。
-- `first_frame_only`：只做指定镜头的产品/包装绑定、改图与像素 QA。只建立当镜最小事实表；不生成 3000–4000 字视频 Prompt、Word、商业权利报告或全片语义审核。
+- `first_frame_only`：只做指定镜头的产品/包装绑定、改图与像素 QA。只建立当镜最小事实表；不生成 3000–4000 字视频 Prompt、Word 或全片语义审核。
 - `prompt_only`：完成口播、角色、分镜和可复制 Prompt；不生图、不导出 Word。它只豁免批准生成首帧、候选成品图、资产复用图库回执和成品包装像素 QA，不豁免完整 SRC/ADD、角色锁、故事、情绪因果、结构化六层证据、无缝动作节拍、口播、商品/包装母版结构与 Prompt lint。必须把 `project.json.execution_tier` 和 workflow 同步设为 `prompt_only`，再由 `pipeline.py compile` 生成逐镜 canonical Prompt、汇总稿与交付回执；禁止聊天中手写一份“总控 Prompt”冒充编译结果。除非用户或平台明确要求，Prompt 不设 3000 字下限，优先保留可执行约束并去掉重复解释。
 - `full_delivery`：用户明确要求完整首帧、逐镜 Prompt 与 Word，且新版口播已经锁定时启用全流程。若明确要求换品，还必须已绑定批准的目标产品参考；若不换品，`product_mode=preserve_source_product` 即可，不要求目标产品参考。TXT、JSON、manifest 和分支 handoff 是内部校验材料；换品候选与批准图仍须在任务内直接显示，但用户侧最终文件只交付 DOCX。只有用户/平台明确指定 3000–4000 字时才启用该字符契约。
 
@@ -43,7 +43,7 @@ description: >-
 5. 先建立完整 `SRC` 原片原子分镜清单。以 ffprobe duration/FPS 为权威，第一项从0开始、相邻边界无空洞/重叠、末项抵达视频末尾，并保存 `start_frame/end_frame`，容差不超过半个源帧。每个 `SRC` 必须恰好保留一次并有准确秒数、文字分镜描述、口播、真实首帧和至少一张自己的批准目标帧；同一 SRC 跨越多个动作关键状态时可按动作顺序保留多张，并逐张写职责。短于4秒时只与相邻 `SRC` 合并为不少于4秒的连续生成片段，不能删镜。按规则补入的吃食/掰开等新镜头使用独立 `ADD` 身份，写入 `inserted_units`，不得冒充 `SRC`；每个 `ADD` 同样必须有生成镜内秒数、可编辑描述、口播和至少一张自己的批准目标帧，并记录新增理由、节奏锚点、源片参考 ID 与参考帧。不同 unit 默认禁止复用同一 asset ID、路径或实际 SHA-256；相邻生成段的连续边界参考仍归真实 owner，不计作另一 unit 的最低覆盖。
 6. `selected_beauty_keyframe` 是另选的美观参考帧，不能替代分镜首帧。
 7. 只修改用户授权修改的元素；保持原构图时锁定人物、动作、机位、场景、光线和空间关系。
-8. 生成前必须审核字幕策略、分镜结构、Prompt、首帧、产品参考绑定、节奏和商业权利。用户提供即梦结果或指出生成差异时，必须继续做结果审核与单镜返工；不得用“本 Skill 只负责生成前”跳过可见的产品、人物、动作或包装错误。
+8. 生成前必须审核字幕策略、分镜结构、Prompt、首帧、产品参考绑定和节奏。用户提供即梦结果或指出生成差异时，必须继续做结果审核与单镜返工；不得用“本 Skill 只负责生成前”跳过可见的产品、人物、动作或包装错误。
 9. 当前项目内先做最小资产盘点。只有用户点名历史项目/旧 Word、要求复用，或当前项目缺失必要资产时，才扩展为跨项目盘点与完整 `planning/asset_reuse_plan.json`。历史批准资产可满足新镜头时优先复用。
 
 ## 1. 初始化
@@ -66,9 +66,15 @@ python3 <skill-dir>/scripts/init_project.py \
 
 目标为榴莲大福时，新项目固定选择 `durian-daifuku-v2`，不得再用已被替换的 v1 半透明、颗粒流心或固定多拉带物理。v2 初始化必须自动写入按产品与状态匹配的知识条目、复制批准参考资产并保留每张图的角色边界。逐镜结构化尺度、像素预检、粉雾皮面、连续果泥、唯一终点和参考角色合同见 [榴莲大福 v2 总控集成合同](references/durian-daifuku-v2-integration.md)。旧项目只通过该合同规定的非破坏迁移副本升级，原项目与旧编译结果保持可回滚；活动副本不得保留内部旧版归档、非标准候选目录、旧 QA 回执、v1 参考目录或旧产品绑定，递归污染扫描未通过时迁移失败关闭。用户指令中明确写成“依据 video-remix-旧版”的当前执行基线可在迁移时精确重绑到当前版；其他旧号语义不猜测、不静默改写。
 
-任何 `durian-daifuku-v2` 生图或改图调用之前，必须先对该镜精确 `source_first_frame` 运行 `scripts/prepare_daifuku_pixel_preflight.py`：测量同景深锚点的像素宽度，计算目标大福宽高与 `bbox_xywh`，生成几何引导图，并把原帧和引导图 SHA-256 写回逐镜 `scale_lock.pixel_plan`。只有状态为 `authorized`、算术/边界框/原帧哈希/引导图哈希全部有效时才允许调用生图工具；“约 7 cm”“3.5–4 指宽”或知识库文字本身不构成生图授权。实际调用同时附精确原帧与几何引导图，并明确引导图只提供位置和尺寸，青色轮廓、十字、标签、文字绝不进入成品。缺失或失效时直接阻断，不先试生成一张再用 QA 发现过小。
+任何 `durian-daifuku-v2` 生图或改图调用之前，必须先对该镜精确 `source_first_frame` 运行 `scripts/prepare_daifuku_pixel_preflight.py`：测量同景深锚点的像素宽度，计算目标大福宽高与 `bbox_xywh`，生成几何引导图，并把原帧和引导图 SHA-256 写回逐镜 `scale_lock.pixel_plan`。只有状态为 `authorized`、算术/边界框/原帧哈希/引导图哈希全部有效时才允许调用生图工具；“约 7 cm”“4.0–4.4 指宽”或知识库文字本身不构成生图授权。手持、按压、咬食或撕拉镜头禁止使用空白画面或纯场景母版作为唯一尺寸锚点；实际调用同时附精确原帧与几何引导图，并明确引导图只提供位置和尺寸，青色轮廓、十字、标签、文字绝不进入成品。生成后必须运行 `scripts/audit_daifuku_scale_relationship.py`，由至少两个同景深手指/手掌关系同时证明 4.0–4.4 指宽或 0.88–0.96 掌宽；任一冲突触发 `DAIFUKU_SCALE_ANCHOR_CONFLICT`，不得批准。缺失或失效时直接阻断。
 
-任何生图或改图调用还必须先运行 `scripts/image_generation_gate.py authorize`。该命令只接受当前 release 的 `first_frame_only/full_delivery` 项目，绑定原始首帧、完整中文 Prompt、人物参考、产品参考、产品合同和适用几何导引图的路径与 SHA-256，并输出唯一授权回执；工具调用的图片输入必须逐项等于回执的 `required_image_inputs`。调用后用 `record-result` 绑定成图和联合 QA；无回执、哈希变化、旧 release、v1 产品、输入为候选图或半成品、联合 QA 未通过时均不可提升为批准帧。
+任何生图或改图调用还必须先运行 `scripts/image_generation_gate.py authorize`。该命令只接受当前 release 的 `first_frame_only/full_delivery` 项目，绑定原始首帧、完整中文 Prompt、人物参考、产品参考、产品合同和适用几何导引图的路径与 SHA-256，并输出唯一授权回执；回执同时保存可直接提交的 Prompt 全文、文本哈希、当前纠错记忆哈希和 `GENERATION_HARD_RULES_V1`。工具调用的文本必须逐字等于回执 Prompt，图片输入必须逐项等于回执的 `required_image_inputs`；硬规则缺失时在授权阶段直接阻断，不把问题留到审核。调用后用 `record-result` 绑定成图和联合 QA，用户在完整图库中确认后用 `promote --approval <gallery-receipt>` 自动写入 `approved_generation_first_frame`；无回执、哈希变化、旧 release、v1 产品、输入为候选图或半成品、联合 QA 未通过或未取得用户批准时均不可提升为批准帧。完整清单见 [生图执行合同](references/generation-execution-contract.md)。
+
+用户指出产品替换、大小、质感、换脸、包装、原产品残留或水印字幕问题时，先运行 `scripts/apply_generation_feedback.py` 把可执行纠错写入 `library/correction_memory.json`，再重新编译 Prompt；纠错记忆改变后旧授权自动失效。审核报告不再是生图规则的唯一载体。
+
+发现单个错误分镜时，不得为它重编全项目或重新打开整批图库。对含多个 SRC/ADD 的生成片段先指定 `--unit-id`，运行 `scripts/pipeline.py compile-shot --project-dir <project> --shot-id <Sxxx> --unit-id <SRCxxx|ADDxxx>`；该命令只在 `review/shot-retries/<run-id>/` 写一份本单元 Prompt 和回执，不修改全局 `generation_pack.json`、Prompt 交付回执或其他镜头。随后把该回执的 Prompt 原文直接交给 `image_generation_gate.py authorize`，只对同一 `shot_id/unit_id` 做 `record-result` 与用户批准；最终整片交付前再运行一次全量 `compile`。旧项目中的 `all_frames`、`whole_or_held_daifuku` 等历史纠错范围会在读取/迁移时确定性归一为 canonical `project/product/style/shot` 规则，不能因字段旧而静默丢失。
+
+Agent 只负责调度、读取和回传状态，不负责重新概括、翻译或删减产品知识与 Prompt。图文 Agent 不得成为规则中转层；总控直接从 canonical Prompt、产品知识库和纠错记忆构造生图请求，Agent 传递的内容必须逐字等于该请求。
 
 同一像素计划最多发起一次初始生成。若结果仍越出宽度容差，不得用同一原帧、同一引导图和同一 Prompt 盲目重试；先判断模型是否违反几何计划，再只调整一个可审计变量或改用确定性局部缩放/合成。生成模型具有随机性，像素预检消除的是“未计算尺寸就盲生”的浪费，不等于承诺所有材质与手部遮挡一次必过。
 
@@ -250,7 +256,9 @@ python3 <skill-dir>/scripts/project_package_master.py \
 
 涉及产品或包装尺寸时，生成包必须先声明唯一 `scale_mode`。常规跨镜一致性使用 `physical_consistency`，执行单根 `12 × 2.5 × 1 cm`（正面目标4.8:1、成品4:1–5:1、侧面厚宽比约0.40）/ 15 cm盒面 / 0.80 与透视规则；只有用户明确要求“基于某张原始批准帧缩小或放大百分比”时使用 `relative_pixel_resize`。后者以该原帧为唯一视觉尺寸事实源，百分比一律按线性宽高倍率解释，并把绝对厘米值、0.80 投影目标和其他镜头尺寸排除出本轮画面硬约束；实体数字仅保留为元数据。两种模式同时出现时触发 `SCALE_MODE_COLLISION`，禁止生成。
 
-原视频的旧产品/旧包装默认只提供动作、位置和遮挡语义，不提供目标尺度。为每个换主体镜头记录 `source_scale_role=compatible_scale_anchor|pose_only_incompatible_scale`；未声明时按 `pose_only_incompatible_scale` 处理。目标棒与目标盒未在同镜、未处于近似同深度或朝向不可比时，禁止把 `12:15=0.80` 写入该镜 Prompt。纸箱/盘子/桌面可见容积无法容纳目标规格与数量时，先触发 `SOURCE_CONTAINER_CAPACITY_CONFLICT`，不得缩小或放大目标包装强行保留原堆放密度。完整规则以 `$extract-video-prompt/references/products/butter-crisp-stick.md` 为唯一事实源。
+原视频的旧产品/旧包装默认只提供动作、位置和遮挡语义，不提供目标尺度。为每个换主体镜头记录 `source_scale_role=compatible_scale_anchor|pose_only_incompatible_scale`；未声明时按 `pose_only_incompatible_scale` 处理。目标棒与目标盒未在同镜、未处于近似同深度或朝向不可比时，禁止把 `12:15=0.80` 写入该镜 Prompt。容器与目标规格不兼容时先调整容器尺寸、装箱布局、数量或景别，并保留产品/零售包装固定规格；只有声明了场景硬尺寸上限且所有合理方案均无解时才触发 `SOURCE_CONTAINER_CAPACITY_CONFLICT` 并停止生成。完整规则以对应产品 bible 为唯一事实源。
+
+榴莲大福运输纸箱使用批准复合透视母版，正面与侧面按独立源四边形校正；纸箱尺寸由精确原帧锚点、固定15×15×4.5厘米零售盒数量和布局推断。每个榴莲大福结果还必须提交哈希绑定的外皮颜色/纹理像素报告，灰棕黑褐石头色或砂石水泥颗粒不得由人工 `surface=true` 放行。
 
 ## 6. 批准首帧与生成结果闸门
 
@@ -338,7 +346,7 @@ python3 <skill-dir>/scripts/align_exports.py --project-dir <project-directory> \
 - `prompts/generation_pack.json`：带 `compile_id` 的不可混用编译合同；逐 S 保存完整 `source_units`、`inserted_units`、Prompt/文件哈希和字符数，顶层保存 canonical input hashes 与项目唯一的 `prompt_length_contract`。Word 导出必须与 `prompts/history/<compile_id>/input_snapshot.json` 完全同批。
 - `review/prompt_delivery_receipt.json`：编译器签发的 Prompt 交付授权；只有 `verify-prompt-delivery` 返回 `authorized` 才能向用户交付。`prompt_only` 另外生成 `prompts/canonical_prompt_only.md`，它只能逐字汇总同批 `Sxxx.md`，不能手写、改写或作为第二事实源。
 - `review/shot_cards.md`：短分镜确认卡，包含画面/声音占比和节奏问题。
-- `review/lint_report.json`：缺项、冲突和商业阻断。
+- `review/lint_report.json`：缺项、冲突和质量问题。
 - `<user-output-directory>/<项目名>_即梦逐分镜执行稿.docx`：必须按 `references/word-delivery-contract.md` 输出，固定包含封面、`当前结构结论`、`生成段总览`、逐 S 的 `动作镜头对应`、`目标帧与职责`、`可复制Prompt原文` 和最终检查清单。每个 `SRC` 保留准确原片秒数、生成镜内秒数、文字分镜描述、口播及至少一张经用户确认的目标帧；每个 `ADD` 标明“无原片秒数”，并保留生成镜内秒数、新增理由、节奏锚点、源片依据、口播及至少一张经用户确认的目标帧。六层证据只留在内部 manifest，不作为 Word 栏目。同一 unit 的多状态图必须全部按动作顺序嵌入并逐张标明 unit ID、asset ID 与职责；掰开与包装镜显示对应证据块；每个 `S` 末尾放 canonical 可复制 Prompt。用户输出目录只允许这一份 DOCX。
 
 `review/shot_cards.md`、TXT、JSON、manifest、对齐报告和分支 handoff 只供内部校验，不作为用户交付，也不在最终回复中列出。
@@ -367,8 +375,4 @@ python3 <skill-dir>/scripts/review_skill_candidates.py --project-dir <project-di
 
 日常审核只读取 `status=new` 的结构化候选，不重读完整对话。脚本只生成去重和范围审核提案，不自动修改 Skill。只有 `status=approved` 且 `user_approved=true` 的跨项目规则，才允许使用 `$skill-creator` 写回对应 reference 或 script。项目专属人物、口播、镜头、临时比例和客户偏好不得提升为全局规则。
 
-任何写回都必须完整读取并执行 [Skill 变更与发布门禁](references/skill-change-governance.md)。禁止直接编辑 live Skill；从当前稳定快照建立候选版本，更新成对 release manifest，运行 `scripts/skill_release_gate.py` 的旧黄金案例、新案例和全量发布测试，通过后才允许保存快照并安装。项目用 `project.json.skill_release_lock` 固定 `bundle_release_id` 与 `prompt_authoring_contract`，`auto_upgrade=false`；live 更新不得静默改变旧项目。
-
-## 11. 商业闸门
-
-商业发布前读取 [references/commercial-gate.md](references/commercial-gate.md)。未清原视频、肖像、音乐、字体、产品声明和参考素材权利时，可内部测试但不能标记为可发布。
+任何写回都必须完整读取并执行 [Skill 变更与发布门禁](references/skill-change-governance.md)。禁止直接编辑 live Skill；从当前稳定快照建立候选版本，更新成对 release manifest，运行 `scripts/skill_release_gate.py` 的旧黄金案例、新案例和全量发布测试，通过后才允许保存快照并安装。项目用 `project.json.skill_release_lock` 固定 `bundle_release_id` 与 `prompt_authoring_contract`，`auto_upgrade=false`；live 更新不得静默改变旧项目。同一 S 的每个 SRC/ADD 生图授权必须使用 unit 自身原帧、可见库存、容器、像素计划和 `--unit-id`；精确首帧确无产品时只能用证据化 `product_visibility=absent` 豁免该首帧的目标产品、包装产品几何、布局库存与产品物理 QA，不得删除后续视频产品状态或隐藏原帧已有产品；原帧有旧产品而执行中和时仍必须提交 product 通过结论及证据。若镜头级旧限制或交付职责仍要求首帧出现旧包装/产品，必须先报跨层冲突并清除；locked map 的语义哈希只能使用正式六字段载荷，扩展 `units[]` 另由文件 SHA 绑定。

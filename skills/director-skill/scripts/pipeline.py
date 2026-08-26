@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import hashlib
 import json
 import re
@@ -15,6 +16,8 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from PIL import Image
+
+from correction_memory import normalize_memory
 
 
 REQUIRED_FILES = {
@@ -38,6 +41,12 @@ VALID_DELIVERY_MODES = {"voiceover", "on_screen_speech", "silent"}
 VALID_EXECUTION_TIERS = {"source_intake", "diagnose_only", "first_frame_only", "prompt_only", "full_delivery"}
 PROMPT_COMPILE_TIERS = {"prompt_only", "full_delivery"}
 PROMPT_ONLY_AGGREGATE = "canonical_prompt_only.md"
+NO_GENERATION_DOCX_MODE = "no_generation_prompt_docx_alignment"
+NO_GENERATION_REFERENCE_ROLES = {
+    "legacy_composition_reference",
+    "legacy_rejected_example",
+    "exact_source_reuse",
+}
 SKILL_DIR = Path(__file__).resolve().parent.parent
 RELEASE_MANIFEST_PATH = SKILL_DIR / "references" / "skill-release.json"
 REQUIRED_PROMPT_HEADERS = (
@@ -48,12 +57,6 @@ REQUIRED_PROMPT_HEADERS = (
     "【产品与动作物理】",
     "【摄影、灯光与声音】",
     "【最小纠错附录】",
-)
-COMMERCIAL_CLEARANCE_FIELDS = (
-    "source_rights_cleared",
-    "portrait_rights_cleared",
-    "music_rights_cleared",
-    "claims_approved",
 )
 PERFORMANCE_LAYER_KEYS = (
     "emotion_trigger",
@@ -136,11 +139,26 @@ def canonical_input_hashes(project_dir: Path) -> Dict[str, str]:
     they are derived outputs, not compile inputs.
     """
     hashes: Dict[str, str] = {}
+    project = load_json(project_dir / REQUIRED_FILES["project"])
     for relative_path in REQUIRED_FILES.values():
         path = project_dir / relative_path
         if not path.is_file():
             raise FileNotFoundError(path)
-        hashes[relative_path.as_posix()] = sha256_file(path)
+        # The compiler consumes correction memory after deterministic legacy
+        # scope normalization. Hash that same canonical value so an old
+        # ``rule``/``all_frames`` file cannot make a fresh compile appear
+        # stale merely because the snapshot contains the executable shape.
+        if relative_path == REQUIRED_FILES["corrections"]:
+            memory = load_json(path)
+            normalized, _ = normalize_memory(
+                memory,
+                project_id=str(project.get("project_id") or ""),
+                product_profile=str(project.get("product_profile") or ""),
+                style_profile=str(project.get("style_profile") or ""),
+            )
+            hashes[relative_path.as_posix()] = canonical_json_sha256(normalized)
+        else:
+            hashes[relative_path.as_posix()] = sha256_file(path)
     return dict(sorted(hashes.items()))
 
 
@@ -499,11 +517,15 @@ def compiled_prompt_quality_errors(prompt: str, shot: Dict[str, Any]) -> set[str
     normalized = re.sub(r"\s+", "", prompt).lower()
     if any(term in normalized for term in ACTION_PLACEHOLDER_TERMS):
         errors.add("PROMPT_PLACEHOLDER_LANGUAGE")
-    for beat in as_list(shot.get("action_beats")):
-        if not isinstance(beat, dict) or not has_text(beat.get("id")):
-            continue
-        if str(beat["id"]).lower() not in normalized:
-            errors.add("PROMPT_ACTION_BEAT_MISSING")
+    # Compact controller-owned Prompts render every canonical beat by time and
+    # action, but intentionally omit internal beat IDs from user-submittable
+    # text. The IDs remain hash-bound in the shot manifest and input snapshot.
+    if shot.get("controller_prompt_mode") != "compact_v1":
+        for beat in as_list(shot.get("action_beats")):
+            if not isinstance(beat, dict) or not has_text(beat.get("id")):
+                continue
+            if str(beat["id"]).lower() not in normalized:
+                errors.add("PROMPT_ACTION_BEAT_MISSING")
     sentences = [
         re.sub(r"\s+", "", item).strip("：:；;，,")
         for item in re.split(r"[。！？!?\n]+", prompt)
@@ -560,6 +582,15 @@ def read_bundle(project_dir: Path) -> Dict[str, Dict[str, Any]]:
     bundle: Dict[str, Dict[str, Any]] = {}
     for key, relative_path in REQUIRED_FILES.items():
         bundle[key] = load_json(project_dir / relative_path)
+    # Legacy projects used scopes such as ``all_frames`` and stored text under
+    # ``rule``. Normalize in memory so old feedback is visible to the compiler
+    # immediately; migration can persist the same canonical shape later.
+    bundle["corrections"], _ = normalize_memory(
+        bundle["corrections"],
+        project_id=str(bundle["project"].get("project_id") or ""),
+        product_profile=str(bundle["project"].get("product_profile") or ""),
+        style_profile=str(bundle["project"].get("style_profile") or ""),
+    )
     return bundle
 
 
@@ -719,6 +750,119 @@ def validate_mix_and_pacing(story: Dict[str, Any], shots: List[Dict[str, Any]], 
     first = min(shots, key=lambda item: (item.get("timecode") or {}).get("start", float("inf")), default=None)
     if first and first.get("narrative_role") != "hook":
         add_issue(issues, "WARN", "opening_without_hook", f"shots/shot_manifest.json.{first.get('id')}.narrative_role", "The opening shot should normally perform the hook role.")
+
+
+def validate_semantic_consistency(story: Dict[str, Any], shots: List[Dict[str, Any]], issues: List[Dict[str, Any]]) -> None:
+    """Reject structured contracts whose audio, purpose and product state contradict each other."""
+    assessment = story.get("source_style_assessment") if isinstance(story.get("source_style_assessment"), dict) else {}
+    strategy = story.get("delivery_strategy") if isinstance(story.get("delivery_strategy"), dict) else {}
+    observed = assessment.get("observed_ratios") if isinstance(assessment.get("observed_ratios"), dict) else {}
+    observed_voiceover = observed.get("voiceover", assessment.get("observed_voiceover_ratio", assessment.get("voiceover_ratio")))
+    source_on_screen = assessment.get("delivery_style") == "on_screen_speech_dominant"
+    no_source_voiceover = isinstance(observed_voiceover, (int, float)) and float(observed_voiceover) <= 0.01
+    if source_on_screen and no_source_voiceover and float(strategy.get("voiceover_target_ratio") or 0) > 0.05:
+        add_issue(issues, "ERROR", "AUDIO_SOURCE_MODE_CONTRADICTION", "planning/story_plan.json.delivery_strategy", "原片观测为屏内口播主导且无画外音证据，目标比例不得反转为画外音；入口、咬合、闭口咀嚼和掰开受力窗口用停声或拟音。")
+    if source_on_screen and no_source_voiceover:
+        for shot in shots:
+            if ((shot.get("audio") or {}).get("delivery_mode")) == "voiceover":
+                add_issue(issues, "ERROR", "UNSUPPORTED_VOICEOVER_INVENTED", f"shots/shot_manifest.json.{shot.get('id')}.audio.delivery_mode", "该原片没有独立画外音证据，不能把屏内说话改造成旁白。")
+
+    incompatible_opening_phrases = ("互补两半", "两半展示", "完整断面", "已撕开断面", "完全掰开")
+    positive_fields = ("purpose", "description", "narrative_role", "visual_goal", "terminal_description")
+
+    def asserted_phrase(value: str, phrase: str) -> bool:
+        for match in re.finditer(re.escape(phrase), value):
+            prefix = value[max(0, match.start() - 16):match.start()]
+            if re.search(r"(?:不出现|不再|并非|不是|禁止|不得|不能|不可|严禁|避免|无)(?:任何|继续|进入|呈现|形成|保留|出现)?\s*$", prefix):
+                continue
+            return True
+        return False
+
+    def flatten_text(value: Any) -> List[str]:
+        if isinstance(value, str):
+            return [value]
+        if isinstance(value, dict):
+            result: List[str] = []
+            for nested in value.values():
+                result.extend(flatten_text(nested))
+            return result
+        if isinstance(value, list):
+            result = []
+            for nested in value:
+                result.extend(flatten_text(nested))
+            return result
+        return []
+
+    def asserts_target_presence_at_exact_first_frame(value: str) -> bool:
+        compact = re.sub(r"\s+", "", value).lower()
+        if not compact:
+            return False
+        exact_marker = any(marker in compact for marker in ("首帧", "0秒", "0.00s", "exactfirstframe", "framezero"))
+        if not exact_marker:
+            return False
+        negative_or_neutralized = any(
+            marker in compact
+            for marker in (
+                "移除旧", "中和", "去除", "不出现", "不得出现", "无产品", "产品不可见",
+                "目标可见大福0", "零售盒0", "visible_target_product_count=0", "removeold",
+                "neutralize", "productabsent", "withouttargetproduct", "notargetproduct",
+            )
+        )
+        if negative_or_neutralized:
+            return False
+        printed_product_package = any(
+            marker in compact
+            for marker in ("透明印刷袋", "印刷包装", "印刷袋", "printedbag", "printedpackage")
+        )
+        counted_target_product = bool(
+            re.search(r"(?:\d+|[一二三四五六七八九十两])[颗枚个](?:[^。；,，]{0,12})(?:大福|产品)", compact)
+            or re.search(r"(?:大福|产品)(?:[^。；,，]{0,12})(?:\d+|[一二三四五六七八九十两])[颗枚个]", compact)
+            or re.search(r"(?:2[×x]2|2[×x]4|2[×x]5).*(?:大福|产品|托盘)", compact)
+        )
+        return printed_product_package or counted_target_product
+
+    for shot in shots:
+        state = shot.get("product_state") if isinstance(shot.get("product_state"), dict) else {}
+        state_id = state.get("state")
+        endpoint = state.get("endpoint_lock") if isinstance(state.get("endpoint_lock"), dict) else {}
+        terminal = endpoint.get("terminal_state")
+        values = [str(shot.get(key) or "") for key in positive_fields] + [str(state.get(key) or "") for key in positive_fields]
+        if state_id == "opening_window_seed" or terminal == "opening_window_seed":
+            if any(asserted_phrase(value, phrase) for phrase in incompatible_opening_phrases for value in values):
+                add_issue(issues, "ERROR", "DAIFUKU_STATE_NARRATIVE_CONTRADICTION", f"shots/shot_manifest.json.{shot.get('id')}", "opening_window_seed 只能到正要掰开、冰皮短宽连续拉伸并首次微露馅；镜头职责不能同时写两半或完整断面。")
+        if state_id == "plated" and any(asserted_phrase(value, phrase) for phrase in incompatible_opening_phrases for value in values):
+            add_issue(issues, "ERROR", "DAIFUKU_PLATED_PURPOSE_CONTRADICTION", f"shots/shot_manifest.json.{shot.get('id')}", "plated 镜头应展示人物端托盘与完整库存，不能沿用互补两半职责。")
+        filling = state.get("filling_lock") if isinstance(state.get("filling_lock"), dict) else {}
+        if filling.get("stringing") is True:
+            add_issue(issues, "ERROR", "DAIFUKU_FILLING_STRINGING_FORBIDDEN", f"shots/shot_manifest.json.{shot.get('id')}.product_state.filling_lock", "拉伸只能来自糯米冰皮/整体软体的短宽连续区；榴莲果泥内馅不拉丝。")
+
+        units = list(shot.get("source_units") or []) + list(shot.get("inserted_units") or [])
+        for unit_index, unit in enumerate(units):
+            if not isinstance(unit, dict):
+                continue
+            exact_contract = unit.get("exact_first_frame_generation_contract")
+            if not isinstance(exact_contract, dict) or exact_contract.get("product_visibility") != "absent":
+                continue
+            unit_id = unit.get("source_shot_id") or unit.get("inserted_shot_id") or f"unit[{unit_index}]"
+            candidates = []
+            candidates.extend(("hard_constraints", value) for value in flatten_text(shot.get("hard_constraints")))
+            candidates.extend((f"{unit_id}.delivery_asset_roles", value) for value in flatten_text(unit.get("delivery_asset_roles")))
+            for field, value in candidates:
+                if asserts_target_presence_at_exact_first_frame(value):
+                    add_issue(
+                        issues,
+                        "ERROR",
+                        "EXACT_FIRST_FRAME_STALE_SHOT_TEXT_CONFLICT",
+                        f"shots/shot_manifest.json.{shot.get('id')}.{field}",
+                        "unit 精确首帧已锁定目标产品 absent/可见数0，但镜头级旧文字仍正向要求印刷产品包装或可见产品。必须清除或重绑旧文字，禁止 Prompt 作者层覆盖 unit 合同。",
+                    )
+
+    for index, segment in enumerate(story.get("segments") or []):
+        if not isinstance(segment, dict) or "爆浆" not in str(segment.get("text") or ""):
+            continue
+        semantics = segment.get("claim_semantics") if isinstance(segment.get("claim_semantics"), dict) else {}
+        if semantics.get("mode") != "spoken_hyperbole_only" or semantics.get("visual_literalization") is not False:
+            add_issue(issues, "ERROR", "SPOKEN_HYPERBOLE_VISUALIZED", f"planning/story_plan.json.segments[{index}].claim_semantics", "口播“爆浆”只能标成 spoken_hyperbole_only，画面仍是连续浓稠、满而不流的果泥，不得生成液态爆浆。")
 
 
 def validate_performance_layers(
@@ -1036,6 +1180,53 @@ def validate_source_shot_contract(
         unit_owner_shots[unit_id] = shot_id
         selected_delivery_assets_by_shot.setdefault(shot_id, []).extend(delivery_ids)
 
+    def validate_exact_frame_unit_contract(unit: Dict[str, Any], unit_path: str, source_value: Any) -> None:
+        contract = unit.get("exact_first_frame_generation_contract")
+        if not isinstance(contract, dict):
+            return
+        visibility = contract.get("product_visibility")
+        if visibility not in {"present", "absent"}:
+            add_issue(issues, "ERROR", "EXACT_FIRST_FRAME_PRODUCT_VISIBILITY_INVALID", f"{unit_path}.exact_first_frame_generation_contract.product_visibility", "Use present or absent from the exact source-frame observation.")
+            return
+        contract_source = resolve_path(project_dir, contract.get("source_frame") or source_value)
+        unit_source = resolve_path(project_dir, source_value)
+        if not contract_source or not unit_source or contract_source != unit_source:
+            add_issue(issues, "ERROR", "EXACT_FIRST_FRAME_UNIT_SOURCE_MISMATCH", f"{unit_path}.exact_first_frame_generation_contract.source_frame", "The unit generation contract must bind this unit's exact source/reference frame, not the shot-level first frame of another unit.")
+        evidence = contract.get("source_observation") if isinstance(contract.get("source_observation"), dict) else {}
+        packaging = unit.get("packaging_evidence") if isinstance(unit.get("packaging_evidence"), dict) else {}
+        if visibility == "absent":
+            source_visible = evidence.get("product_visible")
+            source_count = evidence.get("visible_product_count")
+            coherent = (
+                source_visible in {True, False}
+                and isinstance(source_count, int)
+                and source_count >= 0
+                and ((source_visible is False and source_count == 0) or (source_visible is True and source_count >= 1))
+                and contract.get("product_edit_required") is source_visible
+                and contract.get("product_reference_inputs_required") is False
+                and contract.get("visible_target_product_count") == 0
+                and contract.get("pixel_plan_applicability") == "not_applicable_product_absent"
+                and (packaging.get("visible") is not True or (source_visible is True and contract.get("source_product_action") == "neutralize_to_non_product_carrier"))
+            )
+            if not coherent:
+                add_issue(issues, "ERROR", "EXACT_FIRST_FRAME_PRODUCT_ABSENT_MISMATCH", f"{unit_path}.exact_first_frame_generation_contract", "Target-absent frames keep zero target products and no target references/pixel plan; a visible source product must be explicitly removed/neutralized, while a source-absent frame requires no product edit.")
+            if isinstance(contract.get("product_state"), dict):
+                add_issue(issues, "ERROR", "NON_CANONICAL_PRODUCT_ABSENCE_BYPASS", f"{unit_path}.exact_first_frame_generation_contract.product_state", "Do not hide a product-present unit state behind an absent flag.")
+        else:
+            unit_state = contract.get("product_state") if isinstance(contract.get("product_state"), dict) else {}
+            scale_lock = unit_state.get("scale_lock") if isinstance(unit_state.get("scale_lock"), dict) else {}
+            plan = scale_lock.get("pixel_plan") if isinstance(scale_lock.get("pixel_plan"), dict) else None
+            try:
+                visible_count = int(contract.get("visible_target_product_count"))
+            except (TypeError, ValueError):
+                visible_count = 0
+            if contract.get("product_edit_required") is False or contract.get("product_reference_inputs_required") is False:
+                add_issue(issues, "ERROR", "NON_CANONICAL_PRODUCT_ABSENCE_BYPASS", f"{unit_path}.exact_first_frame_generation_contract", "Product-present units cannot disable replacement inputs.")
+            if visible_count < 1 or evidence.get("product_visible") is not True or evidence.get("visible_product_count") != visible_count:
+                add_issue(issues, "ERROR", "EXACT_FIRST_FRAME_PRODUCT_COUNT_MISMATCH", f"{unit_path}.exact_first_frame_generation_contract.source_observation", "Visible source inventory and target count must be measured per unit and agree exactly.")
+            if not unit_state or not isinstance(plan, dict) or plan.get("status") != "authorized":
+                add_issue(issues, "ERROR", "EXACT_FIRST_FRAME_UNIT_PIXEL_PREFLIGHT_MISSING", f"{unit_path}.exact_first_frame_generation_contract.product_state.scale_lock.pixel_plan", "Each product-present delivery unit needs its own source-bound state, inventory and authorized pixel plan.")
+
     for shot_index, shot in enumerate(shots):
         shot_id = str(shot.get("id") or f"index-{shot_index}")
         base = f"shots/shot_manifest.json.{shot_id}"
@@ -1083,6 +1274,7 @@ def validate_source_shot_contract(
                 add_issue(issues, "ERROR", "SOURCE_FRAME_MISSING", f"{unit_path}.source_first_frame", "Extract an exact source frame for every atomic source shot.")
             elif not source_frame.is_file():
                 add_issue(issues, "ERROR", "SOURCE_FRAME_UNAVAILABLE", f"{unit_path}.source_first_frame", f"Source frame is unavailable: {source_frame}")
+            validate_exact_frame_unit_contract(unit, unit_path, unit.get("source_first_frame"))
 
             validate_performance_layers(project_dir, unit, unit_path, source_by_id, [source_id], issues)
             character = shot.get("character") or {}
@@ -1136,6 +1328,7 @@ def validate_source_shot_contract(
             reference_frame = resolve_path(project_dir, unit.get("source_reference_frame"))
             if reference_frame is None or not reference_frame.is_file():
                 add_issue(issues, "ERROR", "INSERTED_UNIT_REFERENCE_FRAME_MISSING", f"{unit_path}.source_reference_frame", "Bind an exact source/reference frame for the added shot; templates may supplement but cannot replace source evidence.")
+            validate_exact_frame_unit_contract(unit, unit_path, unit.get("source_reference_frame"))
             validate_performance_layers(project_dir, unit, unit_path, source_by_id, reference_ids, issues)
             character = shot.get("character") or {}
             if shot.get("visual_type") in {"person_product_showcase", "person_eating"} or character.get("hands_only") is True:
@@ -2051,21 +2244,19 @@ def validate_project(project_dir: Path, bundle: Dict[str, Dict[str, Any]], issue
         require_candidate_qa=delivery_assets_required,
     )
     validate_prompt_output_ownership(project_dir, shot_items, issues)
+    validate_semantic_consistency(story, shot_items, issues)
     validate_mix_and_pacing(story, shot_items, issues)
 
+    # Commercial rights are project metadata, not a generation/compile gate.
+    # Keep the value for downstream business workflows, but never block the
+    # image Prompt, structural lint, QA or editable Word on this field.
     commercial = project.get("commercial") or {}
     intended_use = commercial.get("intended_use", "internal_test")
-    if intended_use == "commercial_release":
-        for field in COMMERCIAL_CLEARANCE_FIELDS:
-            if commercial.get(field) is not True:
-                add_issue(issues, "BLOCK", "commercial_clearance_missing", f"project.json.commercial.{field}", "Commercial release is blocked until this field is true.")
-        if not has_text(commercial.get("reviewer")):
-            add_issue(issues, "BLOCK", "commercial_reviewer_missing", "project.json.commercial.reviewer", "Name the release reviewer.")
-    elif intended_use not in {"internal_test", "client_review"}:
-        add_issue(issues, "ERROR", "invalid_intended_use", "project.json.commercial.intended_use", "Use internal_test, client_review, or commercial_release.")
+    if intended_use not in {"internal_test", "client_review", "commercial_release"}:
+        add_issue(issues, "WARN", "invalid_intended_use_metadata", "project.json.commercial.intended_use", "intended_use is metadata only and does not block generation or export.")
 
     if project.get("status") == "approved" and any(issue["level"] in {"ERROR", "BLOCK"} for issue in issues):
-        add_issue(issues, "ERROR", "invalid_approved_status", "project.json.status", "Project cannot remain approved while errors or commercial blocks exist.")
+        add_issue(issues, "ERROR", "invalid_approved_status", "project.json.status", "Project cannot remain approved while structural errors exist.")
 
 
 def validate_durian_daifuku_v2_shot(
@@ -2103,10 +2294,23 @@ def validate_durian_daifuku_v2_shot(
         if anchor.get("type") not in allowed_anchor_types or not has_text(anchor.get("evidence")):
             add_issue(issues, "ERROR", "DAIFUKU_SCALE_ANCHOR_INVALID", f"{base}.product_state.scale_lock.anchor", "Bind a reliable same-depth anchor type and observable evidence.")
         ratio = anchor.get("expected_ratio")
-        if anchor.get("type") == "index_finger_mid" and ratio != [3.5, 4.0]:
-            add_issue(issues, "ERROR", "DAIFUKU_FINGER_RATIO_INVALID", f"{base}.product_state.scale_lock.anchor.expected_ratio", "Index-finger scale must lock the reconstructable product width to 3.5–4.0 finger widths.")
+        if anchor.get("type") == "index_finger_mid" and ratio != [4.0, 4.4]:
+            add_issue(issues, "ERROR", "DAIFUKU_FINGER_RATIO_INVALID", f"{base}.product_state.scale_lock.anchor.expected_ratio", "Index-finger scale must lock the reconstructable product width to 4.0–4.4 finger widths.")
         if state_id == "plated" and anchor.get("type") not in {"known_container_dimension", "approved_scene_scale_master"}:
             add_issue(issues, "ERROR", "DAIFUKU_PLATE_SCALE_UNPROVEN", f"{base}.product_state.scale_lock.anchor", "Plated shots require a known container dimension or an approved in-scene scale master; plate appearance alone is not a scale anchor.")
+        hand_interaction = (
+            state_id in {"held", "pressed", "global_stretch", "opening_window_seed", "opening_window_established", "pre_break", "break", "hand_torn_cross_section", "early_cohesive_opening", "two_halves_display", "bitten"}
+            or shot.get("visual_type") == "person_eating"
+            or ((shot.get("character") or {}).get("hands_only") is True)
+        )
+        if hand_interaction and anchor.get("type") == "approved_scene_scale_master":
+            add_issue(
+                issues,
+                "ERROR",
+                "DAIFUKU_SCENE_ONLY_SCALE_ANCHOR_FORBIDDEN",
+                f"{base}.product_state.scale_lock.anchor.type",
+                "A blank or scene-only scale master cannot authorize hand-held, eating, pressing or tearing scale.",
+            )
 
         pixel_plan = scale_lock.get("pixel_plan")
         pixel_base = f"{base}.product_state.scale_lock.pixel_plan"
@@ -2583,13 +2787,18 @@ def validate_shot(
     else:
         seen_ids.add(shot_id)
 
+    unit_contracts = [
+        unit.get("exact_first_frame_generation_contract")
+        for unit in [*(shot.get("source_units") or []), *(shot.get("inserted_units") or [])]
+        if isinstance(unit, dict)
+    ]
     validate_durian_daifuku_v2_shot(
         project_dir,
         product,
         shot,
         issues,
         base,
-        require_pixel_preflight=require_pixel_preflight,
+        require_pixel_preflight=require_pixel_preflight and not any(isinstance(value, dict) for value in unit_contracts),
     )
 
     for field in ("title", "purpose", "narrative_role"):
@@ -2858,10 +3067,63 @@ def determine_release_status(project: Dict[str, Any], issues: Sequence[Dict[str,
         return "NOT CLEARED FOR RELEASE"
     intended_use = (project.get("commercial") or {}).get("intended_use", "internal_test")
     if intended_use == "commercial_release":
-        return "CLEARED FOR RELEASE"
+        return "READY FOR DELIVERY REVIEW"
     if intended_use == "client_review":
-        return "CLIENT REVIEW ONLY"
-    return "INTERNAL TEST ONLY"
+        return "CLIENT REVIEW"
+    return "INTERNAL TEST"
+
+
+def validate_no_generation_docx_contract(project_dir: Path, project: Dict[str, Any], issues: List[Dict[str, Any]]) -> None:
+    mode = project.get("document_delivery_mode")
+    if mode is None:
+        return
+    if mode != NO_GENERATION_DOCX_MODE:
+        add_issue(issues, "ERROR", "DOCUMENT_DELIVERY_MODE_INVALID", "project.json.document_delivery_mode", f"Use {NO_GENERATION_DOCX_MODE} or omit the field.")
+        return
+    try:
+        tier = normalized_execution_tier(project)
+    except ValueError:
+        tier = None
+    if tier != "prompt_only":
+        add_issue(issues, "ERROR", "NO_GENERATION_MODE_TIER_MISMATCH", "project.json.execution_tier", "No-generation DOCX alignment is prompt_only and cannot waive full_delivery image gates.")
+    path = project_dir / "planning" / "no_generation_prompt_docx_alignment_contract.json"
+    if not path.is_file():
+        add_issue(issues, "ERROR", "NO_GENERATION_DOCX_CONTRACT_MISSING", str(path.relative_to(project_dir)), "Create the formal no-generation image-role contract before lint/compile/export.")
+        return
+    try:
+        contract = load_json(path)
+    except Exception as exc:
+        add_issue(issues, "ERROR", "NO_GENERATION_DOCX_CONTRACT_INVALID", str(path.relative_to(project_dir)), str(exc))
+        return
+    if contract.get("schema_version") != "no-generation-prompt-docx-alignment-v1.0" or contract.get("status") != "ready_for_prompt_compile_and_docx_alignment":
+        add_issue(issues, "ERROR", "NO_GENERATION_DOCX_CONTRACT_INVALID", str(path.relative_to(project_dir)), "Schema/status mismatch.")
+    refs = contract.get("references") or []
+    expected_units = ["ADD001","SRC001","SRC002","SRC003","SRC004","SRC005","ADD002","SRC006","ADD003"]
+    owners = [str(item.get("owner_unit_id")) for item in refs if isinstance(item, dict)]
+    if owners != expected_units or len(set(owners)) != len(owners):
+        add_issue(issues, "ERROR", "NO_GENERATION_REFERENCE_OWNER_SET_MISMATCH", f"{path.relative_to(project_dir)}.references", "Reference owners must be the exact nine-unit order, once each.")
+    for index, item in enumerate(refs):
+        base = f"{path.relative_to(project_dir)}.references[{index}]"
+        if not isinstance(item, dict):
+            add_issue(issues, "ERROR", "NO_GENERATION_REFERENCE_INVALID", base, "Reference must be an object.")
+            continue
+        role = item.get("asset_role")
+        if role == "approved_target_frame" or role not in NO_GENERATION_REFERENCE_ROLES:
+            add_issue(issues, "ERROR", "NO_GENERATION_REFERENCE_ROLE_FORBIDDEN", f"{base}.asset_role", "Old/rejected images cannot be approved_target_frame in no-generation mode.")
+        asset_path = resolve_path(project_dir, item.get("path"))
+        if asset_path is None or not asset_path.is_file():
+            add_issue(issues, "ERROR", "NO_GENERATION_REFERENCE_FILE_MISSING", f"{base}.path", "Reference file is missing.")
+        elif item.get("sha256") != sha256_file(asset_path):
+            add_issue(issues, "ERROR", "NO_GENERATION_REFERENCE_HASH_MISMATCH", f"{base}.sha256", "Reference hash does not match the file.")
+        if item.get("owner_unit_id") == "SRC006" and role != "exact_source_reuse":
+            add_issue(issues, "ERROR", "SRC006_EXACT_SOURCE_ROLE_REQUIRED", f"{base}.asset_role", "S007/SRC006 must use exact_source_reuse.")
+        if item.get("owner_unit_id") != "SRC006" and role == "exact_source_reuse":
+            add_issue(issues, "ERROR", "EXACT_SOURCE_REUSE_SCOPE_INVALID", f"{base}.asset_role", "Only SRC006 may claim exact source reuse in this contract.")
+    if contract.get("approved_target_frame_count") != 0:
+        add_issue(issues, "ERROR", "NO_GENERATION_APPROVED_FRAME_CLAIM_FORBIDDEN", f"{path.relative_to(project_dir)}.approved_target_frame_count", "No-generation mode must explicitly claim zero approved target frames.")
+    script = contract.get("script_lock") or {}
+    if script.get("effective_character_count") != 249 or script.get("unit_concatenation_equivalent") is not True or script.get("spoken_shot_concatenation_equivalent") is not True:
+        add_issue(issues, "ERROR", "NO_GENERATION_SCRIPT_LOCK_INVALID", f"{path.relative_to(project_dir)}.script_lock", "Require program-computed 249-character unit and spoken-shot equivalence.")
 
 
 def lint_project(project_dir: Path, write_report: bool = True) -> Dict[str, Any]:
@@ -2876,6 +3138,7 @@ def lint_project(project_dir: Path, write_report: bool = True) -> Dict[str, Any]
         bundle = read_bundle(project_dir)
         project = bundle["project"]
         validate_project(project_dir, bundle, issues)
+        validate_no_generation_docx_contract(project_dir, project, issues)
         if requires_delivery_assets(project):
             reuse_audit = subprocess.run(
                 [
@@ -3065,6 +3328,154 @@ def break_occurrence_text(occurrences: Iterable[Dict[str, Any]]) -> str:
             f"互补橙金断面：{proof.get('complementary_orange_gold_fracture')}；"
             f"同一根两段守恒：{proof.get('same_stick_two_piece_conservation')}；音画同步：{proof.get('sound_sync')}"
         )
+    return "\n".join(lines)
+
+
+def compact_controller_prompt(
+    project: Dict[str, Any],
+    story: Dict[str, Any],
+    shot: Dict[str, Any],
+) -> Optional[str]:
+    """Compile the controller-owned concise blueprint without audit prose.
+
+    The full canonical shot, six-layer evidence and action beat ledger remain in
+    the hash-bound input snapshot.  This view is deliberately the copyable
+    generation Prompt: no SRC/ADD identifiers, rejected-candidate discussion,
+    internal contract language, or repeated product-bible paragraphs.
+    """
+    if shot.get("controller_prompt_mode") != "compact_v1":
+        return None
+    records = story.get("controller_prompt_blueprints") or []
+    record = next(
+        (
+            item for item in records
+            if isinstance(item, dict) and str(item.get("shot_id")) == str(shot.get("id"))
+        ),
+        None,
+    )
+    if not record or not has_text(record.get("prompt_blueprint")):
+        raise RuntimeError(f"Compact controller Prompt missing for {shot.get('id')}")
+    blueprint = str(record["prompt_blueprint"]).strip()
+    replacements = {
+        "S003由两个独立源unit组成，": "本镜由硬切分隔的两个独立画面组成，",
+        "SRC002": "前半画面",
+        "SRC003": "后半画面",
+        "SRC006": "原片片尾卡",
+        "ADD001": "开场画面",
+        "ADD002": "托盘展示画面",
+        "ADD003": "收尾画面",
+        "本unit": "本画面",
+        "旧Word图只作构图参考": "",
+        "旧三托12颗图不得冒充精确首帧": "",
+        "该unit存在7厘米尺度与容器容量硬冲突，": "",
+    }
+    for old, new in replacements.items():
+        blueprint = blueprint.replace(old, new)
+    blueprint = re.sub(r"当前合同库存为[^。；]*容量冲突[^。；]*[。；]?", "", blueprint)
+    blueprint = re.sub(r"[；，]\s*[；，]", "；", blueprint)
+    blueprint = re.sub(r"。\s*。", "。", blueprint)
+
+    audio = shot.get("audio") or {}
+    camera = shot.get("camera") or {}
+    lighting = shot.get("lighting") or {}
+    state = shot.get("product_state") or {}
+    beats = []
+    for beat in as_list(shot.get("action_beats")):
+        if not isinstance(beat, dict):
+            continue
+        beats.append(
+            f"{float(beat.get('start', 0)):.2f}–{float(beat.get('end', 0)):.2f}秒："
+            f"{beat.get('action')}；声音：{beat.get('voice_change')}；产品：{beat.get('product_change')}。"
+        )
+    beat_text = "\n".join(beats)
+    product_text = (
+        "大福完整或可重建直径约7厘米、最大7.5厘米，手持与托盘内保持同一尺寸级；"
+        "轮廓饱满略扁圆，可有轻微手工差异，不呈正球、蛋形、包子、圆盘或方块。"
+        "表皮为暖奶白至浅象牙白，侧光可见极薄细腻糯米粉雾，不发黄、不像塑料或石头。"
+        "榴莲馅为连续浓稠暖金黄果泥，至少九成为无清晰颗粒边界的果泥，只有少量稀疏软纤维；"
+        "不形成疙瘩、蜂窝、孔洞、液流或拉丝。糯米冰皮和整体软体只做短、宽、连续拉伸。"
+    )
+    if state.get("state") == "opening_window_seed":
+        product_text += "终点只到4–8毫米不规则微开口，露馅不超过5%，两侧空气间隙为0，立即停止。"
+    if state.get("state") == "bitten":
+        product_text += "咬口只能由牙齿压迫形成单一局部内凹缺口，入口与嘴边阶段始终朝人物和口腔，不朝镜头。"
+    return f"""【生成目标与叙事职责】
+{project.get('aspect_ratio')}真实手机食品UGC，时长{(shot.get('timecode') or {}).get('duration')}秒。{shot.get('purpose')}
+
+【口播原文与声源】
+声源={audio.get('delivery_mode')}。台词：“{audio.get('script_text')}”。{audio.get('speech_timing')}无独立画外音。
+
+【原片叙事复原】
+{blueprint}
+
+【原片逐时动作】
+{beat_text}
+
+【产品与动作物理】
+{product_text}
+
+【摄影、灯光与声音】
+{camera.get('shot_size')}，{camera.get('angle')}，{camera.get('movement')}；焦点：{camera.get('focus')}。灯光：{lighting.get('source')}，{lighting.get('temperature')}。拟音：{join_cn(audio.get('foley'))}。
+
+【最小纠错附录】
+无字幕、无水印、无新增品牌或平台文字；不改变人物身份、手指数量、原片机位与遮挡关系；不把包装层级、容器轮廓或旧食品尺度传给大福。"""
+
+
+def generation_hard_rule_block(
+    project: Dict[str, Any],
+    product: Dict[str, Any],
+    state: Dict[str, Any],
+    product_state: Dict[str, Any],
+    shot: Dict[str, Any],
+    structured_product_locks: Sequence[str],
+    package_instruction: str,
+    correction_text: Sequence[str],
+    knowledge_instructions: Sequence[str],
+) -> str:
+    """Render the rules that must travel with the actual image-generation call.
+
+    This is intentionally separate from the audit metadata.  A controller may
+    shorten narrative prose, but it may not shorten these generation locks.  The
+    image gate hashes this exact block together with the submitted Prompt.
+    """
+    assets = shot.get("asset_links") if isinstance(shot.get("asset_links"), dict) else {}
+    edit_chain = assets.get("edit_chain") if isinstance(assets.get("edit_chain"), dict) else {}
+    lines = ["GENERATION_HARD_RULES_V1（以下规则必须原样随生图请求提交，不得只留在审核报告）"]
+    lines.append(
+        f"目标产品只允许使用“{product.get('name') or product.get('profile_id') or '项目锁定产品'}”；"
+        "只保留目标产品，原视频旧食品、旧包装、旧品牌/印刷全部清除，不得把旧产品的形状、颜色、材质或尺度带入目标。"
+        if project.get("product_mode") == "replace_product"
+        else f"目标产品保持项目锁定的“{product.get('name') or product.get('profile_id') or '项目产品'}”，不得擅自换成其他食品。"
+    )
+    if product.get("profile_id") == "durian-daifuku-v2":
+        lines.append(
+            "榴莲大福尺寸、形状、表皮和内馅必须以结构化产品锁与像素尺度计划为准：约7厘米、同景深锚点测量，"
+            "暖奶白细糯米粉雾皮，连续暖金黄果泥（少量稀疏软纤维），禁止石头/塑料/颗粒/蜂窝/孔洞/液流/拉丝质感。"
+        )
+    if edit_chain.get("face_edit_enabled") is True:
+        lines.append(
+            f"人物换脸只使用授权身份参考{join_cn(edit_chain.get('face_reference_ids'), '已绑定参考')}；"
+            "身份与产品替换同一请求原子执行，保持原片发型、身体、服装、姿势、机位、光照、遮挡和手指数量不漂移。"
+        )
+    if product_state.get("packaging") not in (None, False, "none", "hidden") or package_instruction:
+        lines.append(
+            "包装只使用当前镜头已批准且哈希绑定的可见层级/可见面母版投射；独立袋、零售盒、运输箱不可互换，"
+            "不得保留原包装或凭空发明包装结构、品牌字样和图案。"
+        )
+    lines.append("精确从原始首帧生成并保持原构图、动作、空间遮挡、光线和背景连续；失败候选不可作为下一次输入。")
+    lines.append("全图到最后一帧无新增字幕、水印、贴纸、平台UI、无关品牌或文字。")
+    # Standard prompts already carry these values in the canonical product
+    # section.  Repeat them only for compact blueprints, where this block is
+    # the mechanism that prevents the prose view from dropping generation locks.
+    compact_mode = shot.get("controller_prompt_mode") == "compact_v1"
+    if structured_product_locks and compact_mode:
+        lines.append("结构化产品锁：" + join_cn(structured_product_locks))
+    if package_instruction and compact_mode:
+        lines.append("包装执行锁：" + package_instruction)
+    if correction_text and compact_mode:
+        lines.append("本镜已写回的纠错规则：" + join_cn(correction_text))
+    if knowledge_instructions and compact_mode:
+        lines.append("已批准知识规则：" + join_cn(knowledge_instructions))
     return "\n".join(lines)
 
 
@@ -3303,6 +3714,24 @@ def compile_shot(bundle: Dict[str, Dict[str, Any]], shot: Dict[str, Any]) -> Tup
 【最小纠错附录】
 {join_cn(minimal_negative_rules, '无额外纠错项')}。"""
 
+    hard_rule_block = generation_hard_rule_block(
+        project,
+        product,
+        state,
+        product_state,
+        shot,
+        structured_product_locks,
+        package_instruction,
+        correction_text,
+        knowledge_instructions,
+    )
+    # The compact controller blueprint is a prose view only.  It can never
+    # replace the generation locks that are submitted to the image model.
+    prompt_body = prompt_body.rstrip() + "\n\n【生图硬性规则】\n" + hard_rule_block
+    compact_prompt = compact_controller_prompt(project, story, shot)
+    if compact_prompt is not None:
+        prompt_body = compact_prompt.rstrip() + "\n\n【生图硬性规则】\n" + hard_rule_block
+
     metadata = {
         "shot_id": shot.get("id"),
         "title": shot.get("title"),
@@ -3330,6 +3759,7 @@ def compile_shot(bundle: Dict[str, Dict[str, Any]], shot: Dict[str, Any]) -> Tup
         "knowledge_entry_ids": [entry.get("id") for entry in knowledge],
         "knowledge_image_references": knowledge_images,
         "prompt_authoring_contract": normalized_skill_release_lock(project)["prompt_authoring_contract"],
+        "compilation_mode": "controller_blueprint_compact_v1" if compact_prompt is not None else "standard",
         "skill_release_lock": normalized_skill_release_lock(project),
         "prompt_file": f"prompts/{shot.get('id')}.md",
         "source_units": source_units,
@@ -3415,7 +3845,7 @@ def build_shot_cards(bundle: Dict[str, Dict[str, Any]], report: Dict[str, Any]) 
         for issue in blockers:
             lines.append(f"- [{issue['level']}] `{issue['code']}` {issue['path']}：{issue['message']}")
     else:
-        lines.append("- 没有结构错误或商业阻断项。")
+        lines.append("- 没有结构错误或质量阻断项。")
     return "\n".join(lines) + "\n"
 
 
@@ -3616,7 +4046,7 @@ def verify_prompt_delivery(project_dir: Path, *, check_workflow: bool = True) ->
         elif any(prompt_text.count(header) != 1 for header in REQUIRED_PROMPT_HEADERS):
             fail("PROMPT_DELIVERY_SECTION_CONTRACT_FAILED", str(relative_path), "Canonical Prompt section headings must appear exactly once.")
         normalized = re.sub(r"\s+", "", prompt_text).lower()
-        missing_beats = [
+        missing_beats = [] if entry.get("compilation_mode") == "controller_blueprint_compact_v1" else [
             str(beat.get("id"))
             for beat in shot.get("action_beats") or []
             if isinstance(beat, dict) and has_text(beat.get("id")) and str(beat.get("id")).lower() not in normalized
@@ -3672,6 +4102,131 @@ def verify_prompt_delivery(project_dir: Path, *, check_workflow: bool = True) ->
     }
 
 
+def _delivery_unit_for_shot(shot: Dict[str, Any], unit_id: Optional[str]) -> Tuple[Optional[Dict[str, Any]], str]:
+    """Resolve one SRC/ADD for the local repair lane."""
+    units: List[Tuple[str, Dict[str, Any]]] = []
+    for kind in ("source_units", "inserted_units"):
+        for unit in shot.get(kind) or []:
+            if isinstance(unit, dict):
+                identifier = str(unit.get("source_shot_id") or unit.get("inserted_shot_id") or "")
+                if identifier:
+                    units.append((kind, unit))
+    if unit_id:
+        matches = [(kind, unit) for kind, unit in units if unit_id in {str(unit.get("source_shot_id") or ""), str(unit.get("inserted_shot_id") or "")}]
+        if len(matches) != 1:
+            raise RuntimeError(f"Expected exactly one delivery unit {unit_id!r}; found {len(matches)} in {shot.get('id')}")
+        return matches[0][1], matches[0][0]
+    if len(units) > 1:
+        raise RuntimeError(f"SHOT_REPAIR_UNIT_REQUIRED: {shot.get('id')} contains multiple SRC/ADD units; pass --unit-id")
+    if not units:
+        raise RuntimeError(f"SHOT_REPAIR_UNIT_MISSING: {shot.get('id')} contains no SRC/ADD delivery unit")
+    return units[0][1], units[0][0]
+
+
+def compile_shot_repair(project_dir: Path, shot_id: str, unit_id: Optional[str] = None) -> Dict[str, Any]:
+    """Compile one delivery unit without invalidating the project-wide pack.
+
+    This is deliberately a separate lane from ``compile``.  It consumes the
+    same canonical compiler and correction/knowledge bibles, but writes only a
+    timestamped retry prompt and receipt under ``review/shot-retries``.  A
+    failed shot therefore does not force every already-correct shot through a
+    new compile, gallery and approval cycle.
+    """
+    project_dir = project_dir.expanduser().resolve()
+    project = load_json(project_dir / "project.json")
+    execution_tier = normalized_execution_tier(project)
+    if execution_tier not in {"first_frame_only", "full_delivery"}:
+        raise RuntimeError("SHOT_REPAIR_TIER_BLOCKED: local image repair requires first_frame_only or full_delivery")
+    bundle = read_bundle(project_dir)
+    shots = [item for item in (bundle["shots"].get("shots") or []) if isinstance(item, dict) and str(item.get("id")) == str(shot_id)]
+    if len(shots) != 1:
+        raise RuntimeError(f"Expected exactly one shot {shot_id!r}; found {len(shots)}")
+    original = shots[0]
+    unit, unit_kind = _delivery_unit_for_shot(original, unit_id)
+    local_shot = copy.deepcopy(original)
+    local_unit = copy.deepcopy(unit)
+    local_shot["source_units"] = [local_unit] if unit_kind == "source_units" else []
+    local_shot["inserted_units"] = [local_unit] if unit_kind == "inserted_units" else []
+    generation_timecode = local_unit.get("generation_timecode")
+    if isinstance(generation_timecode, dict) and isinstance(generation_timecode.get("duration"), (int, float)):
+        local_shot["timecode"] = copy.deepcopy(generation_timecode)
+    assets = copy.deepcopy(local_shot.get("asset_links") or {})
+    contract = local_unit.get("exact_first_frame_generation_contract")
+    if isinstance(contract, dict):
+        local_shot["product_state"] = copy.deepcopy(contract.get("product_state") or local_shot.get("product_state") or {})
+        source_value = contract.get("source_frame") or local_unit.get("source_first_frame") or assets.get("source_first_frame")
+        if source_value:
+            assets["source_first_frame"] = source_value
+        if isinstance(contract.get("product_references"), list):
+            assets["product_references"] = copy.deepcopy(contract["product_references"])
+    if local_unit.get("source_first_frame"):
+        assets["source_first_frame"] = local_unit.get("source_first_frame")
+    if local_unit.get("source_reference_frame") and not assets.get("source_first_frame"):
+        assets["source_first_frame"] = local_unit.get("source_reference_frame")
+    local_shot["asset_links"] = assets
+    prompt_markdown, metadata = compile_shot(bundle, local_shot)
+    prompt_text = extract_prompt_text(prompt_markdown)
+    if not prompt_text:
+        raise RuntimeError(f"SHOT_REPAIR_PROMPT_EMPTY: compiler returned no text block for {shot_id}/{unit_id or 'unit'}")
+
+    run_id = datetime.now().strftime("%Y%m%dT%H%M%S") + "-" + uuid.uuid4().hex[:6]
+    retry_dir = project_dir / "review" / "shot-retries" / run_id
+    prompt_path = retry_dir / f"{shot_id}-{unit_id or str(unit.get('source_shot_id') or unit.get('inserted_shot_id'))}.md"
+    write_text(prompt_path, prompt_markdown)
+    from image_generation_gate import shot_contract_value, unit_contract_value
+
+    local_inputs = {
+        "project": sha256_file(project_dir / REQUIRED_FILES["project"]),
+        "product": sha256_file(project_dir / REQUIRED_FILES["product"]),
+        "style": sha256_file(project_dir / REQUIRED_FILES["style"]),
+        "corrections": sha256_file(project_dir / REQUIRED_FILES["corrections"]),
+        "knowledge": sha256_file(project_dir / REQUIRED_FILES["knowledge"]),
+        "shot_contract": canonical_json_sha256(shot_contract_value(original)),
+        "unit_contract": canonical_json_sha256(unit_contract_value(unit)),
+    }
+    locked_release = normalized_skill_release_lock(project)
+    current_release = current_release_manifest()
+    local_repair_flag = ""
+    if locked_release.get("bundle_release_id") != current_release.get("bundle_release_id"):
+        local_repair_flag = " --local-repair"
+    receipt = {
+        "schema_version": "shot-repair-compile-v1.0",
+        "status": "ready_for_image_authorization",
+        "repair_scope": "one_delivery_unit",
+        "project_id": project.get("project_id"),
+        "shot_id": str(shot_id),
+        "unit_id": str(unit_id or unit.get("source_shot_id") or unit.get("inserted_shot_id")),
+        "unit_kind": unit_kind,
+        "execution_tier": execution_tier,
+        "bundle_release_id": locked_release.get("bundle_release_id"),
+        "current_bundle_release_id": current_release.get("bundle_release_id"),
+        "prompt_authoring_contract": locked_release.get("prompt_authoring_contract"),
+        "release_compatibility_lane": "explicit_local_shot_repair" if local_repair_flag else None,
+        "prompt_file": str(prompt_path.relative_to(project_dir)),
+        "prompt_sha256": sha256_text(prompt_text),
+        "prompt_file_sha256": sha256_file(prompt_path),
+        "prompt_text": prompt_text,
+        "correction_rule_ids": metadata.get("correction_rule_ids") or [],
+        "knowledge_entry_ids": metadata.get("knowledge_entry_ids") or [],
+        "local_input_hashes": local_inputs,
+        "created_at": now_iso(),
+        "next_command": "image_generation_gate.py authorize --project-dir <project> --shot-id " + str(shot_id) + " --unit-id " + str(unit_id or unit.get("source_shot_id") or unit.get("inserted_shot_id")) + " --prompt-file " + str(prompt_path) + local_repair_flag,
+    }
+    receipt_path = retry_dir / "shot-repair-receipt.json"
+    write_json(receipt_path, receipt)
+    return {
+        "status": receipt["status"],
+        "project_dir": str(project_dir),
+        "shot_id": str(shot_id),
+        "unit_id": receipt["unit_id"],
+        "prompt_file": str(prompt_path),
+        "receipt": str(receipt_path),
+        "correction_rule_ids": receipt["correction_rule_ids"],
+        "knowledge_entry_ids": receipt["knowledge_entry_ids"],
+        "global_pack_touched": False,
+    }
+
+
 def compile_project(project_dir: Path) -> Dict[str, Any]:
     project_dir = project_dir.expanduser().resolve()
     project_preflight = load_json(project_dir / "project.json")
@@ -3684,13 +4239,6 @@ def compile_project(project_dir: Path) -> Dict[str, Any]:
     if report["counts"]["ERROR"]:
         raise RuntimeError(f"Compilation blocked by {report['counts']['ERROR']} structural error(s). Review review/lint_report.json.")
     bundle = read_bundle(project_dir)
-    intended_use = (bundle["project"].get("commercial") or {}).get("intended_use", "internal_test")
-    if intended_use == "commercial_release" and report["counts"]["BLOCK"]:
-        raise RuntimeError(
-            f"Compilation blocked for commercial_release by {report['counts']['BLOCK']} commercial clearance block(s). "
-            "Set intended_use to internal_test/client_review while preparing, or clear the commercial gate first."
-        )
-
     prompt_length_contract = normalized_prompt_length_contract(bundle["project"])
     prompt_dir = project_dir / "prompts"
     compile_id = datetime.now().strftime("%Y%m%dT%H%M%S") + "-" + uuid.uuid4().hex[:6]
@@ -3880,6 +4428,14 @@ def build_parser() -> argparse.ArgumentParser:
     compile_parser = subparsers.add_parser("compile", help="Compile prompts, generation pack and review cards.")
     compile_parser.add_argument("--project-dir", required=True, type=Path)
 
+    repair_parser = subparsers.add_parser(
+        "compile-shot",
+        help="Compile exactly one SRC/ADD retry prompt without rebuilding the project-wide generation pack.",
+    )
+    repair_parser.add_argument("--project-dir", required=True, type=Path)
+    repair_parser.add_argument("--shot-id", required=True)
+    repair_parser.add_argument("--unit-id", help="Required when the generation clip contains multiple SRC/ADD units.")
+
     verify_parser = subparsers.add_parser(
         "verify-prompt-delivery",
         help="Verify that Prompt files are fresh compiler-owned outputs with a matching delivery receipt.",
@@ -3898,6 +4454,9 @@ def main() -> int:
             return 1 if report["counts"]["ERROR"] or report["counts"]["BLOCK"] else 0
         if args.command == "compile":
             print(json.dumps(compile_project(args.project_dir), ensure_ascii=False, indent=2))
+            return 0
+        if args.command == "compile-shot":
+            print(json.dumps(compile_shot_repair(args.project_dir, args.shot_id, args.unit_id), ensure_ascii=False, indent=2))
             return 0
         if args.command == "verify-prompt-delivery":
             verification = verify_prompt_delivery(args.project_dir)

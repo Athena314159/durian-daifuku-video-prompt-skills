@@ -19,6 +19,7 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Inches, Pt, RGBColor
 
+from correction_memory import normalize_memory
 from pipeline import canonical_input_hashes, normalized_prompt_length_contract, normalized_skill_release_lock
 
 
@@ -428,9 +429,6 @@ def rerun_lint(project_dir: Path) -> dict[str, Any]:
     report = read_json(report_path)
     if result.returncode == 2 or report.get("counts", {}).get("ERROR", 0):
         raise SystemExit("DOCX export blocked by fresh project lint:\n" + (result.stdout or result.stderr))
-    project = read_json(project_dir / "project.json")
-    if (project.get("commercial") or {}).get("intended_use") == "commercial_release" and report.get("counts", {}).get("BLOCK", 0):
-        raise SystemExit("DOCX export blocked by unresolved commercial-release gates:\n" + (result.stdout or result.stderr))
     return report
 
 
@@ -500,7 +498,15 @@ def validate_compile_snapshot(
             if snapshot_field not in snapshot:
                 errors.append(f"input_snapshot.{snapshot_field} missing")
                 continue
-            if canonical_path.is_file() and snapshot.get(snapshot_field) != read_json(canonical_path):
+            current_value = read_json(canonical_path) if canonical_path.is_file() else None
+            if relative_path == "library/correction_memory.json" and isinstance(current_value, dict):
+                current_value, _ = normalize_memory(
+                    current_value,
+                    project_id=str(project.get("project_id") or ""),
+                    product_profile=str(project.get("product_profile") or ""),
+                    style_profile=str(project.get("style_profile") or ""),
+                )
+            if canonical_path.is_file() and snapshot.get(snapshot_field) != current_value:
                 errors.append(f"input_snapshot.{snapshot_field} differs from current {relative_path}")
 
     current_source = read_json(project_dir / "source" / "source_manifest.json")

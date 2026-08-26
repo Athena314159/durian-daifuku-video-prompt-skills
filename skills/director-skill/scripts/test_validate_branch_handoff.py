@@ -211,6 +211,8 @@ def build_contract(root: Path) -> tuple[Path, Path, Path, dict[str, Any], dict[s
         "source_duration_seconds": 30.0, "source_units": source_units, "inserted_units": inserted_units,
         "generation_shot_map": generation_map, "eating_plan": eating_plan, "break_plan": break_plan,
     }
+    locked["semantic_payload_version"] = "locked-shot-map-six-field-v1"
+    locked["semantic_sha256"] = semantic_shot_map_sha256(locked)
     locked_path = root / "locked.json"
     write(locked_path, locked)
     lock_hash = semantic_shot_map_sha256(locked)
@@ -338,6 +340,19 @@ def main() -> None:
         locked_path, text_path, image_path, locked, text_handoff, image_handoff = build_contract(root)
         expect(True, text_path, locked_path)
         expect(True, image_path, locked_path)
+
+        bad_locked = copy.deepcopy(locked)
+        bad_locked["semantic_sha256"] = "0" * 64
+        bad_locked_path = root / "bad-embedded-semantic-lock.json"
+        write(bad_locked_path, bad_locked)
+        expect(False, text_path, bad_locked_path, "required six-field semantic payload")
+
+        bad_locked = copy.deepcopy(locked)
+        del bad_locked["source_units"]
+        bad_locked["semantic_sha256"] = semantic_shot_map_sha256(bad_locked)
+        bad_locked_path = root / "bad-missing-six-field-lock.json"
+        write(bad_locked_path, bad_locked)
+        expect(False, text_path, bad_locked_path, "missing semantic fields")
 
         bad = copy.deepcopy(image_handoff)
         bad["schema_version"] = "image-handoff-v1.0"

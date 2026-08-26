@@ -20,9 +20,12 @@ from docx import Document
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
-from init_project import initialize_project  # noqa: E402
+from init_project import RELEASE_MANIFEST_PATH, initialize_project  # noqa: E402
 from pipeline import compile_project, lint_project, verify_prompt_delivery  # noqa: E402
 from align_exports import parse_docx_body  # noqa: E402
+
+
+CURRENT_RELEASE = json.loads(RELEASE_MANIFEST_PATH.read_text(encoding="utf-8"))["bundle_release_id"]
 
 
 def read_json(path: Path):
@@ -494,7 +497,7 @@ def main() -> int:
             {
                 "status": "reviewed",
                 "contract_binding": {
-                    "bundle_release_id": "video-remix-1.0.13",
+                    "bundle_release_id": CURRENT_RELEASE,
                     "prompt_authoring_contract": "narrative-six-layer-v1",
                     "product_profile": "self-test-product-v1",
                 },
@@ -521,7 +524,7 @@ def main() -> int:
                         "responsibility": "SRC001 动作关键状态：双手掰开并展示大福横截面。",
                         "rights_status": "cleared",
                         "source_project": "test-project",
-                        "origin_bundle_release_id": "video-remix-1.0.13",
+                        "origin_bundle_release_id": CURRENT_RELEASE,
                         "origin_product_profile": "self-test-product-v1",
                         "source_shot_ids": ["SRC001"],
                         "avatar_ids": [],
@@ -548,7 +551,7 @@ def main() -> int:
                         "responsibility": "ADD001 动作关键状态：近距举起两半大福展示馅料层次。",
                         "rights_status": "cleared",
                         "source_project": "test-project",
-                        "origin_bundle_release_id": "video-remix-1.0.13",
+                        "origin_bundle_release_id": CURRENT_RELEASE,
                         "origin_product_profile": "self-test-product-v1",
                         "source_shot_ids": [],
                         "inserted_shot_ids": ["ADD001"],

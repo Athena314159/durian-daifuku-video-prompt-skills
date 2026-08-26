@@ -52,6 +52,21 @@ REQUIRED_INVARIANTS = {
     "packaging_visible_shots_require_level_face_asset_binding",
     "packaging_status_text_never_substitutes_explicit_user_approval",
     "historical_active_projects_require_explicit_execution_redirect",
+    "shipping_carton_size_is_model_inferred_and_capacity_validated",
+    "source_package_inventory_controls_visibility",
+    "shipping_carton_composite_faces_require_rectified_regions",
+    "daifuku_shell_color_and_stone_texture_are_pixel_audited",
+    "product_state_story_and_audio_semantics_are_cross_checked",
+    "legacy_execution_contracts_are_removed_and_rebuilt_during_migration",
+    "generation_request_contains_canonical_prompt_text",
+    "generation_hard_rules_not_review_only",
+    "compact_prompt_preserves_generation_locks",
+    "user_feedback_writeback_required_before_retry",
+    "user_approved_image_promotes_to_canonical",
+    "commercial_clearance_is_nonblocking",
+    "agent_is_orchestrator_not_prompt_author",
+    "legacy_correction_rules_are_normalized_before_generation",
+    "shot_repair_does_not_recompile_global_pack",
 }
 
 REQUIRED_LINT_CODES = (
@@ -246,6 +261,10 @@ def validate_release(
             "NON_CANONICAL_PROMPT_BYPASS",
             "prompt_delivery_receipt.json",
             "verify_prompt_delivery",
+            "generation_hard_rule_block",
+            "GENERATION_HARD_RULES_V1",
+            "compile-shot",
+            "compile_shot_repair",
         ),
         errors,
         "PIPELINE_RELEASE_LOCK_MISSING",
@@ -262,9 +281,36 @@ def validate_release(
             "DAIFUKU_PACKAGING_REFERENCE_MISSING",
             "DAIFUKU_PACKAGING_REFERENCE_NOT_USER_APPROVED",
             "PROJECT_EXECUTION_REDIRECTED",
+            "GENERATION_HARD_RULES_V1",
+            "correction_memory_sha256",
+            "promote_user_approved_result",
         ),
         errors,
         "IMAGE_GENERATION_GATE_REGRESSION",
+    )
+    require_text(
+        director_dir / "references/generation-execution-contract.md",
+        ("GENERATION_HARD_RULES_V1", "原视频旧食品", "无字幕", "无水印", "用户反馈写回", "Agent 仅做编排"),
+        errors,
+        "GENERATION_EXECUTION_CONTRACT_MISSING",
+    )
+    require_text(
+        director_dir / "scripts/correction_memory.py",
+        ("normalize_memory", "LEGACY_SCOPE_MAP", "instruction", "active"),
+        errors,
+        "CORRECTION_MEMORY_NORMALIZATION_MISSING",
+    )
+    require_text(
+        director_dir / "scripts/test_shot_repair_lane.py",
+        ("compile_shot_repair", "global_pack_touched", "shot repair lane regression test"),
+        errors,
+        "SHOT_REPAIR_REGRESSION_MISSING",
+    )
+    require_text(
+        director_dir / "scripts/test_commercial_clearance_nonblocking.py",
+        ("commercial_clearance_missing", "commercial gate first", "商业闸门"),
+        errors,
+        "COMMERCIAL_CLEARANCE_GATE_REMOVAL_REGRESSION_MISSING",
     )
 
     golden_path = director_dir / GOLDEN_RELATIVE
@@ -324,9 +370,11 @@ def validate_release(
         extract_dir / "scripts/lint_prompt_txt.py",
         director_dir / "SKILL.md",
         director_dir / "references/prompt-rules.md",
+        director_dir / "references/generation-execution-contract.md",
         director_dir / "references/skill-change-governance.md",
         director_dir / "scripts/pipeline.py",
         director_dir / "scripts/image_generation_gate.py",
+        director_dir / "scripts/apply_generation_feedback.py",
     ]
     hashes = {str(path): sha256_file(path) for path in tracked_files if path.is_file()}
     return {

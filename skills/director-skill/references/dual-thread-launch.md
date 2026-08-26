@@ -159,7 +159,7 @@ user_visible_progress=inline_clickable_images
 }
 ```
 
-`shot_map_sha256` 统一对 locked shot map 的六项语义载荷 `source_duration_seconds / source_units / inserted_units / generation_shot_map / eating_plan / break_plan` 做 UTF-8、键排序、无空白 JSON 规范化后求 SHA-256；不得一边哈希文件原始字节、另一边哈希字段内容。locked shot map 本身必须含这六项，图、文分支和总控使用同一算法。
+`shot_map_sha256` 统一对 locked shot map 的六项语义载荷 `source_duration_seconds / source_units / inserted_units / generation_shot_map / eating_plan / break_plan` 做 UTF-8、键排序、无空白 JSON 规范化后求 SHA-256；不得一边哈希文件原始字节、另一边哈希字段内容。locked shot map 本身必须含这六项，并写入 `semantic_payload_version=locked-shot-map-six-field-v1` 与等于同算法结果的 `semantic_sha256`，图、文分支和总控使用同一算法。可额外保存 `units[]` 等执行扩展，但它们不能替代这六项；完整文件 SHA-256 另行绑定扩展内容。
 
 `branch_role` 是机器字段，只能写英文枚举 `image` 或 `text`，不得写“图”“文”“图Agent”“文Agent”。两个可执行 schema 分别是 `references/schemas/image_handoff.schema.json` 与 `references/schemas/text_handoff.schema.json`。文分支先跑自身深层结构/跨字段校验；随后总控对图、文两份 handoff 各跑一次跨锁校验：
 

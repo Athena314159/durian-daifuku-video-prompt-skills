@@ -17,7 +17,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from init_project import initialize_project, load_json, write_json  # noqa: E402
+from init_project import RELEASE_MANIFEST_PATH, initialize_project, load_json, write_json  # noqa: E402
 from pipeline import compile_shot, validate_durian_daifuku_v2_shot  # noqa: E402
 from prepare_daifuku_pixel_preflight import prepare  # noqa: E402
 from test_durian_daifuku_v2_contract import opening_shot  # noqa: E402
@@ -48,6 +48,35 @@ def main() -> int:
         manifest["shots"] = [shot]
         write_json(manifest_path, manifest)
 
+        scene_only = copy.deepcopy(shot)
+        scene_only["product_state"]["scale_lock"]["anchor"] = {
+            "type": "approved_scene_scale_master",
+            "expected_ratio": None,
+            "evidence": "空白片尾安全区",
+        }
+        manifest["shots"] = [scene_only]
+        write_json(manifest_path, manifest)
+        try:
+            prepare(
+                argparse.Namespace(
+                    project_dir=project_dir,
+                    shot_id="S001",
+                    anchor_type="approved_scene_scale_master",
+                    anchor_bbox=[100, 500, 20, 60],
+                    selected_ratio=4.2,
+                    anchor_physical_cm=None,
+                    target_width_px=84,
+                    target_center=[400, 600],
+                    height_ratio=0.9,
+                    evidence="空白片尾安全区",
+                )
+            )
+            raise AssertionError("scene-only anchor unexpectedly authorized a hand-interaction shot")
+        except ValueError as exc:
+            assert "DAIFUKU_SCENE_ONLY_SCALE_ANCHOR_FORBIDDEN" in str(exc)
+        manifest["shots"] = [shot]
+        write_json(manifest_path, manifest)
+
         missing_issues: list[dict] = []
         validate_durian_daifuku_v2_shot(
             project_dir,
@@ -65,7 +94,7 @@ def main() -> int:
                 shot_id="S001",
                 anchor_type="index_finger_mid",
                 anchor_bbox=[100, 500, 20, 60],
-                selected_ratio=3.75,
+                selected_ratio=4.2,
                 anchor_physical_cm=None,
                 target_width_px=None,
                 target_center=[400, 600],
@@ -73,13 +102,13 @@ def main() -> int:
                 evidence="同景深接触食指中段横向实测20像素",
             )
         )
-        assert pixel_plan["target"]["width_px"] == 75
-        assert pixel_plan["target"]["height_px"] == 68
-        assert pixel_plan["target"]["width_tolerance_px"] == [70, 80]
-        assert pixel_plan["target"]["bbox_xywh"] == [362, 566, 75, 68]
+        assert pixel_plan["target"]["width_px"] == 84
+        assert pixel_plan["target"]["height_px"] == 76
+        assert pixel_plan["target"]["width_tolerance_px"] == [80, 88]
+        assert pixel_plan["target"]["bbox_xywh"] == [358, 562, 84, 76]
         assert pixel_plan["anchor"]["measurement_method"] == "annotated_bbox"
         assert pixel_plan["anchor"]["measurement_bbox_xywh"] == [100, 500, 20, 60]
-        assert pixel_plan["contract_binding"]["bundle_release_id"] == "video-remix-1.0.13"
+        assert pixel_plan["contract_binding"]["bundle_release_id"] == load_json(RELEASE_MANIFEST_PATH)["bundle_release_id"]
         assert (project_dir / pixel_plan["guide_path"]).is_file()
         assert (project_dir / pixel_plan["manifest_path"]).is_file()
 
@@ -105,7 +134,7 @@ def main() -> int:
             "knowledge": load_json(project_dir / "library/knowledge_index.json"),
         }
         markdown, _ = compile_shot(bundle, prepared_shot)
-        for token in ("同景深锚点实测=20.0px", "目标大福=75×68px", "替换框xywh=[362, 566, 75, 68]", "绝不把青色轮廓"):
+        for token in ("同景深锚点实测=20.0px", "目标大福=84×76px", "替换框xywh=[358, 562, 84, 76]", "绝不把青色轮廓"):
             assert token in markdown, token
 
         arithmetic_bad = copy.deepcopy(prepared_shot)
