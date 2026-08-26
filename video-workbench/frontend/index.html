@@ -1,0 +1,598 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>镜流工作台 · 即梦视频改款</title>
+  <link rel="stylesheet" href="/styles.css?v=20260825-13">
+</head>
+<body>
+  <div id="app" class="app-shell" data-connected="false">
+    <header class="titlebar">
+      <div class="brand-block">
+        <div class="brand-mark" aria-hidden="true"><span>镜</span></div>
+        <div>
+          <div class="brand-name">镜流工作台</div>
+          <div class="brand-subtitle">即梦短视频改款 · 本地总控</div>
+        </div>
+      </div>
+
+      <div class="project-heading" id="project-heading">
+        <strong id="project-title">尚未导入项目</strong>
+        <span id="project-stage">请先置入原视频</span>
+      </div>
+
+      <div class="title-actions">
+        <div class="connection-chip" id="connection-chip">
+          <span class="status-dot"></span>
+          <span id="connection-text">正在连接本地执行层</span>
+        </div>
+        <button class="icon-button" id="open-task-center" type="button" aria-label="打开任务中心" title="任务中心">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 9h8M8 13h5"/></svg>
+          <span class="button-counter" id="task-counter" hidden>0</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="workbench">
+      <aside class="project-sidebar">
+        <div class="sidebar-section-title">任务工作区</div>
+        <nav class="main-nav" aria-label="主要功能">
+          <button class="nav-item is-active" type="button" data-view="editor">
+            <span class="nav-icon">◈</span><span>当前任务</span>
+          </button>
+          <button class="nav-item" type="button" data-view="tasks">
+            <span class="nav-icon">⌁</span><span>历史任务</span><span class="nav-badge" id="nav-task-count">0</span>
+          </button>
+          <button class="nav-item" type="button" data-view="library">
+            <span class="nav-icon">◇</span><span>知识库</span>
+          </button>
+          <button class="nav-item" type="button" data-view="deliveries">
+            <span class="nav-icon">✓</span><span>审核与交付</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-section-title project-list-title">
+          <span>项目</span>
+          <div class="sidebar-title-actions">
+            <button type="button" class="sidebar-create-button" id="new-project-button" aria-label="新建视频项目" title="新建视频项目"><span aria-hidden="true">＋</span> 项目</button>
+            <button type="button" class="text-icon-button" id="refresh-projects" aria-label="刷新项目" title="刷新项目">↻</button>
+          </div>
+        </div>
+        <div class="project-list" id="project-list">
+          <div class="project-list-empty">暂无项目</div>
+        </div>
+
+        <div class="sidebar-footer">
+          <div class="footer-status-row"><span>本地 API</span><strong id="api-version">—</strong></div>
+          <div class="footer-status-row"><span>Codex CLI</span><strong id="codex-version">检测中</strong></div>
+          <div class="footer-status-row"><span>媒体工具</span><strong id="media-tools">检测中</strong></div>
+          <div class="footer-status-row"><span>图像生成</span><strong id="image-adapter">检测中</strong></div>
+        </div>
+      </aside>
+
+      <main class="main-stage">
+        <section class="app-view is-active" id="view-editor" data-view-panel="editor">
+          <div class="project-taskbar">
+            <div class="taskbar-project"><span>项目</span><strong id="taskbar-project-name">尚未选择项目</strong></div>
+            <div class="task-tab-strip" id="task-tab-strip" role="tablist" aria-label="当前项目任务">
+              <span class="task-tab-empty">置入原视频后建立第一个任务</span>
+            </div>
+            <button class="new-task-button" id="new-task-button" type="button"><span>＋</span> 新建任务</button>
+          </div>
+          <div class="editor-layout">
+            <section class="media-column">
+              <div class="workspace-toolbar">
+                <div class="toolbar-left">
+                  <button class="segmented-button is-active" type="button" data-editor-mode="source">原片</button>
+                  <button class="segmented-button" type="button" data-editor-mode="candidate">图片总览</button>
+                </div>
+                <div class="toolbar-right">
+                  <label class="compact-field">
+                    <span>执行方式</span>
+                    <select id="execution-mode">
+                      <option value="single">单任务总控</option>
+                      <option value="paired" selected>总控 + 图像审计 / 文本分析并行</option>
+                    </select>
+                  </label>
+                  <label class="secondary-button native-file-button" id="replace-video-button" role="button" tabindex="0" hidden>替换原视频<input class="native-file-overlay" id="current-project-video-input" type="file" accept="video/mp4,video/quicktime,video/x-m4v,video/webm" tabindex="-1" aria-label="选择替换原视频"></label>
+                  <button class="secondary-button" id="project-settings-button" type="button">项目设置</button>
+                </div>
+              </div>
+
+              <div class="media-stage" id="media-stage">
+                <div class="portrait-canvas" id="portrait-canvas">
+                  <div class="video-empty-state" id="video-empty-state">
+                    <div class="drop-illustration" aria-hidden="true">
+                      <span class="film-strip">▶</span>
+                    </div>
+                    <h1>置入 9:16 原视频</h1>
+                    <p>点击选择或把视频拖进这个竖屏画布。支持 MP4、MOV、M4V、WebM。</p>
+                    <div class="empty-actions">
+                      <label class="primary-button large native-file-button" id="choose-video-button" role="button" tabindex="0"><span id="choose-video-button-label">选择原视频</span><input class="native-file-overlay" id="workbench-video-input" type="file" accept="video/mp4,video/quicktime,video/x-m4v,video/webm" tabindex="-1" aria-label="选择原视频"></label>
+                      <button class="secondary-button large" id="open-existing-project" type="button">已登记项目</button>
+                    </div>
+                    <div class="empty-contract">
+                      <span>导入</span><span>拆分镜</span><span>换头 / 换产品</span><span>图文任务</span>
+                    </div>
+                  </div>
+
+                  <video id="source-video" class="source-video" preload="metadata" playsinline hidden></video>
+                  <img id="media-image-preview" class="media-image-preview" alt="当前项目图片预览" hidden>
+                  <div class="media-mode-empty" id="media-mode-empty" hidden><strong>当前还没有可预览图片</strong><small>候选图与已导入的生成结果都会在这里统一总览。</small></div>
+                  <div class="video-overlay top-left" id="video-resolution" hidden>—</div>
+                  <div class="video-overlay top-right" id="video-mode-label" hidden>原片预览</div>
+                  <div class="upload-progress" id="upload-progress" hidden>
+                    <div class="upload-progress-track"><span id="upload-progress-bar"></span></div>
+                    <strong id="upload-progress-text">正在导入视频…</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div class="transport" id="transport" hidden>
+                <div class="transport-playback">
+                  <button class="transport-button" id="jump-start" type="button" aria-label="回到开头">|◀</button>
+                  <button class="transport-button play" id="play-toggle" type="button" aria-label="播放或暂停">▶</button>
+                  <button class="transport-button" id="jump-end" type="button" aria-label="跳到结尾">▶|</button>
+                  <span class="time-readout"><span id="current-time">00:00.000</span> / <span id="duration-time">00:00.000</span></span>
+                  <input id="video-scrubber" class="video-scrubber" type="range" min="0" max="1000" value="0" aria-label="视频播放位置">
+                </div>
+                <div class="transport-actions">
+                  <button class="secondary-button small" id="mark-eating" type="button">标记吃镜头</button>
+                  <button class="secondary-button small" id="mark-breaking" type="button">标记掰开镜头</button>
+                  <button class="secondary-button small" id="open-split-plan" type="button" disabled>在游标处拆镜</button>
+                </div>
+              </div>
+
+              <section class="timeline-panel" id="timeline-panel" hidden>
+                <div class="panel-heading compact">
+                  <div>
+                    <h2>原片逐镜时间轴</h2>
+                    <p id="timeline-summary">等待分析原片</p>
+                  </div>
+                  <div class="timeline-legend">
+                    <span><i class="legend-dot source"></i>SRC 原片</span>
+                    <span><i class="legend-dot eating"></i>吃食</span>
+                    <span><i class="legend-dot breaking"></i>掰开</span>
+                    <span><i class="legend-dot issue"></i>问题</span>
+                  </div>
+                </div>
+                <div class="timeline-ruler" id="timeline-ruler"></div>
+                <div class="shot-timeline" id="shot-timeline">
+                  <div class="timeline-empty">完成“分析原片”后，这里会显示从 0 秒到片尾的全部 SRC 镜头。</div>
+                </div>
+              </section>
+            </section>
+
+            <aside class="inspector" id="inspector">
+              <section class="shot-focus" id="shot-focus">
+                <div class="shot-focus-heading">
+                  <div><span>当前分镜</span><strong id="shot-focus-id">未选择分镜</strong><small id="shot-focus-time">项目 → 任务 → 分镜</small></div>
+                  <button class="copy-button" id="copy-selected-image" type="button" disabled>复制图片</button>
+                </div>
+                <div class="shot-focus-media" id="shot-focus-media"><span>选择分镜后在这里查看大图</span></div>
+              </section>
+              <div class="inspector-tabs" role="tablist" aria-label="镜头控制面板">
+                <button type="button" role="tab" aria-selected="true" data-inspector-tab="replace">主操控</button>
+                <button type="button" role="tab" aria-selected="false" data-inspector-tab="detect">检测</button>
+                <button type="button" role="tab" aria-selected="false" data-inspector-tab="script">口播</button>
+                <button type="button" role="tab" aria-selected="false" data-inspector-tab="prompt">Prompt</button>
+              </div>
+
+              <div class="inspector-scroll">
+                <section class="inspector-panel is-active" data-inspector-panel="replace">
+                  <div class="inspector-heading">
+                    <div><span class="eyebrow">当前项目操作</span><h2>替换什么</h2></div>
+                    <span class="selection-scope" id="selection-scope-label">全片</span>
+                  </div>
+
+                  <div class="operation-grid" id="operation-grid">
+                    <label class="operation-card is-selected">
+                      <input type="radio" name="operation" value="product_only" checked>
+                      <span class="operation-icon">品</span><strong>只换产品</strong><small>人物完全保留</small>
+                    </label>
+                    <label class="operation-card">
+                      <input type="radio" name="operation" value="head_only">
+                      <span class="operation-icon">头</span><strong>只换头</strong><small>身体服装保留</small>
+                    </label>
+                    <label class="operation-card">
+                      <input type="radio" name="operation" value="head_product">
+                      <span class="operation-icon">头+</span><strong>换头 + 产品</strong><small>双锁独立审核</small>
+                    </label>
+                  </div>
+
+                  <div class="replacement-target-grid">
+                  <div class="control-section replacement-target-card" id="product-control-section">
+                    <div class="section-title-row"><div><h3>替换产品</h3><span class="target-mode-note" id="product-mode-status">当前模式启用</span></div><button class="text-button" type="button" data-open-library="product">管理产品库</button></div>
+                    <label class="form-field">
+                      <span>自主选择产品与包装版本</span>
+                      <select id="product-select"><option value="">请选择目标产品</option></select>
+                    </label>
+                    <div class="asset-preview-row" id="product-preview-row">
+                      <div class="asset-preview-placeholder">尚未选择产品</div>
+                    </div>
+                    <button class="secondary-button full" id="upload-product-reference" type="button">＋ 上传产品或包装参考图</button>
+                  </div>
+
+                  <div class="control-section replacement-target-card" id="avatar-control-section">
+                    <div class="section-title-row"><div><h3>替换人物（换头）</h3><span class="target-mode-note" id="avatar-mode-status">切换后启用</span></div><button class="text-button" type="button" data-open-library="avatar">管理人物库</button></div>
+                    <label class="form-field">
+                      <span>自主选择目标人物</span>
+                      <select id="avatar-select"><option value="">请选择目标人物</option></select>
+                    </label>
+                    <label class="form-field" id="source-person-field">
+                      <span>替换原片中的哪位人物</span>
+                      <select id="source-person-select"><option value="">单人物项目 · 自动</option></select>
+                    </label>
+                    <div class="inline-notice" id="character-owner-notice">当前按单人物绑定；原片分析若检测到多位人物，会先要求完成人物 owner / 角色锁，不会把所有人的头一起替换。</div>
+                    <div class="asset-preview-row" id="avatar-preview-row">
+                      <div class="asset-preview-placeholder">尚未选择人物</div>
+                    </div>
+                    <input id="person-edit-mode" type="hidden" value="head">
+                    <label class="checkbox-row"><input id="portrait-rights" type="checkbox" disabled><span>人物库授权状态（新增人物时确认并写入审计记录）</span></label>
+                    <button class="secondary-button full" id="upload-avatar-reference" type="button">＋ 上传正脸、左右 45° 参考</button>
+                  </div>
+                  </div>
+
+                  <div class="control-section">
+                    <div class="section-title-row"><h3>作用镜头</h3><button class="text-button" id="select-shots-button" type="button">逐镜选择</button></div>
+                    <div class="scope-options">
+                      <label><input type="radio" name="scope" value="all" checked><span>全片所有符合镜头</span></label>
+                      <label><input type="radio" name="scope" value="people"><span>仅人物出镜镜头</span></label>
+                      <label><input type="radio" name="scope" value="selected"><span>仅已勾选镜头</span></label>
+                      <label><input type="radio" name="scope" value="range"><span>仅时间范围</span></label>
+                    </div>
+                    <div class="scope-range-fields" id="scope-range-fields" hidden><label><span>开始秒</span><input id="scope-range-start" type="number" min="0" step="0.001" value="0"></label><label><span>结束秒</span><input id="scope-range-end" type="number" min="0.001" step="0.001" value="5"></label></div>
+                    <div class="selection-summary" id="selection-summary">尚未生成分镜清单</div>
+                  </div>
+
+                  <div class="control-section locked-fields">
+                    <h3>始终保持不变</h3>
+                    <div class="lock-pills">
+                      <span>原片动作</span><span>机位</span><span>场景</span><span>光线</span><span>时间节奏</span>
+                    </div>
+                    <p>人物库只提供身份；产品库只提供产品与包装事实。未被授权的像素区域不会跟随参考图替换。</p>
+                  </div>
+
+                  <div class="control-section binding-transaction">
+                    <div class="section-title-row"><h3>项目绑定事务</h3><span class="state-label" id="binding-state">尚未应用</span></div>
+                    <p id="binding-summary">选择只会修改草稿配置；“应用绑定”会备份旧事实源并确定性写入当前项目，避免产品和人物只在下拉框里变了。</p>
+                    <button class="secondary-button full" id="apply-bindings" type="button">应用人物 / 产品绑定</button>
+                  </div>
+                </section>
+
+                <section class="inspector-panel" data-inspector-panel="detect">
+                  <div class="inspector-heading"><div><span class="eyebrow">视觉与节奏审计</span><h2>检测项目</h2></div><button class="text-button" id="run-detection" type="button">全部检测</button></div>
+                  <div class="detector-list">
+                    <label class="detector-item"><input type="checkbox" value="eating" checked><span class="detector-icon eating">吃</span><span><strong>吃镜头检测</strong><small>送入口、咬合、离嘴、闭口咀嚼与说话转换</small></span><em id="detector-eating-state">待运行</em></label>
+                    <label class="detector-item"><input type="checkbox" value="breaking" checked><span class="detector-icon breaking">掰</span><span><strong>掰开镜头检测</strong><small>施力、一次断裂、两半分离、断面与碎屑</small></span><em id="detector-breaking-state">待运行</em></label>
+                    <label class="detector-item"><input type="checkbox" value="avatar" checked><span class="detector-icon avatar">人</span><span><strong>人物一致性</strong><small>脸、发色、服装、身体与参考背景泄漏</small></span><em id="detector-avatar-state">待运行</em></label>
+                    <label class="detector-item"><input type="checkbox" value="product" checked><span class="detector-icon product">品</span><span><strong>产品与包装</strong><small>尺寸、数量、材质、接触、包装拓扑和文字母版</small></span><em id="detector-product-state">待运行</em></label>
+                    <label class="detector-item"><input type="checkbox" value="coverage" checked><span class="detector-icon coverage">图</span><span><strong>图片覆盖</strong><small>每个 SRC/ADD 的动作状态图、owner 与批准回执</small></span><em id="detector-coverage-state">待运行</em></label>
+                  </div>
+                  <div class="result-list" id="detection-results">
+                    <div class="inspector-empty">运行检测后，问题会按镜头显示，并可一键派回对应工作线。</div>
+                  </div>
+                </section>
+
+                <section class="inspector-panel" data-inspector-panel="script">
+                  <div class="inspector-heading"><div><span class="eyebrow">原片优先</span><h2>口播与字幕</h2></div><span class="state-label" id="script-lock-state">未锁定</span></div>
+                  <div class="script-source-tabs">
+                    <button class="is-active" type="button" data-script-source="source">原片提取</button>
+                    <button type="button" data-script-source="revised">新版口播</button>
+                    <button type="button" data-script-source="mapping">逐镜分配</button>
+                  </div>
+                  <textarea class="script-editor" id="script-editor" placeholder="导入视频并完成原片分析后，这里会出现可直接修改的连续口播。"></textarea>
+                  <div class="script-meta"><span id="script-char-count">0 个有效字符</span><span id="script-language">语种：待检测</span></div>
+                  <div class="inline-notice">新版口播未由你确认前，系统不会编译最终 Prompt，也不会把“等待修改”误报成技术失败。</div>
+                  <div class="button-row"><button class="secondary-button" id="save-script" type="button">保存修改</button><button class="primary-button" id="lock-script" type="button">确认并锁定新版口播</button></div>
+                </section>
+
+                <section class="inspector-panel" data-inspector-panel="prompt">
+                  <div class="inspector-heading"><div><span class="eyebrow">当前镜头</span><h2>Prompt 检查</h2></div><span class="state-label" id="prompt-state">未编译</span></div>
+                  <label class="form-field"><span>选择生成段</span><select id="prompt-shot-select"><option>暂无生成段</option></select></label>
+                  <div class="prompt-tools"><button type="button" data-prompt-view="final" class="is-active">可复制 Prompt</button><button type="button" data-prompt-view="evidence">源证据</button><button type="button" data-prompt-view="lint">问题</button></div>
+                  <pre class="prompt-editor" id="prompt-editor">尚未编译。完成新版口播锁定、角色锁、产品/人物选择与分镜确认后，可启动文线编译。</pre>
+                  <div class="shot-rework-controls">
+                    <div class="section-title-row"><h3>本镜人工纠偏</h3><span class="state-label" id="rework-shot-label">未选择镜头</span></div>
+                    <div class="issue-code-grid" id="rework-issue-codes">
+                      <label><input type="checkbox" value="EMOTION_FLAT"><span>情绪平 / 没活人感</span></label>
+                      <label><input type="checkbox" value="GENERIC_SIX_LAYER"><span>六层套话 / 水词</span></label>
+                      <label><input type="checkbox" value="PACING_NOT_SPLIT"><span>长镜未拆动作拍</span></label>
+                      <label><input type="checkbox" value="EATING_SHOT_MISSING"><span>漏吃 / 咬 / 咀嚼</span></label>
+                      <label><input type="checkbox" value="BREAKING_SHOT_MISSING"><span>漏掰开 / 断面</span></label>
+                      <label><input type="checkbox" value="PRODUCT_SCALE_WRONG"><span>产品 / 包装尺寸错</span></label>
+                      <label><input type="checkbox" value="LIGHTING_LAZY"><span>光影偷懒 / 不贴场</span></label>
+                    </div>
+                    <label class="form-field"><span>人物情绪与可见表演（用户覆盖）</span><textarea id="rework-emotion" rows="3" placeholder="写镜头里真正要看到的情绪变化、眼神、嘴角、呼吸和抑制过程；不要只写抽象情绪词。"></textarea></label>
+                    <label class="form-field"><span>动作拍（每行一个 beat）</span><textarea id="rework-action-beats" rows="4" placeholder="例如：0.0–0.6s 看向产品并停顿&#10;0.6–1.3s 掰开，一次脆断&#10;1.3–2.1s 断面送近镜头"></textarea></label>
+                    <label class="form-field"><span>说话 / 吃食转换</span><input id="rework-speech-transition" type="text" placeholder="例如：闭口咀嚼结束后吸气，再自然接下一句；不得边嚼边清晰说话"></label>
+                    <label class="form-field"><span>给本镜返工线的具体要求</span><textarea id="rework-reason" rows="4" placeholder="直接写你要怎么改。只影响当前 SRC / ADD，不会整批清零。"></textarea></label>
+                  </div>
+                  <div class="button-row"><button class="copy-button" id="copy-prompt" type="button">一键复制 Prompt</button><button class="primary-button" id="rework-prompt" type="button">按以上要求返工本镜</button></div>
+                </section>
+              </div>
+
+              <div class="inspector-footer">
+                <div class="preflight-state" id="preflight-state">
+                  <span class="preflight-dot waiting"></span>
+                  <span><strong>等待视频</strong><small>导入后才能创建任务合同</small></span>
+                </div>
+                <button class="run-button" id="run-project-button" type="button" disabled>
+                  <span>启动总控任务</span><small id="run-button-hint">先导入原视频</small>
+                </button>
+              </div>
+            </aside>
+          </div>
+
+          <section class="bottom-dock" id="bottom-dock">
+            <div class="dock-tabs" role="tablist" aria-label="项目详情">
+              <span class="dock-project-context" id="dock-project-context">项目 / 分镜</span>
+              <button type="button" role="tab" aria-selected="true" data-dock-tab="shots">镜头板 <span id="shot-count">0</span></button>
+              <button type="button" role="tab" aria-selected="false" data-dock-tab="tasks">任务进度 <span id="dock-task-count">0</span></button>
+              <button type="button" role="tab" aria-selected="false" data-dock-tab="assets">图片与图库 <span id="asset-count">0</span></button>
+              <button type="button" role="tab" aria-selected="false" data-dock-tab="events">运行记录</button>
+            </div>
+            <div class="dock-actions"><button class="text-button" id="toggle-dock" type="button">收起</button></div>
+            <div class="dock-content">
+              <div class="dock-panel is-active" data-dock-panel="shots">
+                <div class="dock-empty">导入视频后，先启动“原片分析”。镜头板会保留每一个 SRC，并显示吃食、掰开、人物、产品、图片和 Prompt 状态。</div>
+                <div class="shot-board" id="shot-board"></div>
+              </div>
+              <div class="dock-panel" data-dock-panel="tasks">
+                <div class="task-lanes" id="task-lanes"><div class="dock-empty">还没有任务。</div></div>
+              </div>
+              <div class="dock-panel" data-dock-panel="assets">
+                <div class="asset-dock-toolbar">
+                  <div><strong id="result-upload-selection">先在镜头板选择一个 SRC / ADD</strong><small>把生成平台回传的首帧或视频登记到准确 unit、版本和批准链</small></div>
+                  <div class="button-row"><button class="text-button" id="show-more-assets" type="button" hidden>显示更多</button><button class="secondary-button" id="open-result-upload" type="button">导入生成结果</button></div>
+                </div>
+                <div class="asset-gallery" id="asset-gallery"><div class="dock-empty">候选图、批准图和完整图库总览会在这里显示，不会只给你文件路径。</div></div>
+              </div>
+              <div class="dock-panel" data-dock-panel="events">
+                <div class="event-stream" id="event-stream"><div class="dock-empty">运行记录会显示每个任务的真实状态、命令、等待输入和失败原因。</div></div>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <section class="app-view full-page-view" id="view-tasks" data-view-panel="tasks">
+          <div class="page-heading"><div><span class="eyebrow">可暂停、可取消、可定点返工</span><h1>Codex 任务中心</h1><p>图像审计与文本分析可并行；生成图片需要单独的图像模型适配器。跨项目可并行，同一项目写任务按顺序执行。</p></div><button class="primary-button" id="tasks-start-ready" type="button">启动下一个可运行任务</button></div>
+          <div class="task-center-grid" id="task-center-grid"><div class="page-empty">选择一个项目后查看任务。</div></div>
+        </section>
+
+        <section class="app-view full-page-view" id="view-library" data-view-panel="library">
+          <div class="page-heading"><div><span class="eyebrow">版本、授权、参考角色分离</span><h1>产品与人物知识库</h1><p>产品主体、独立包装、零售盒、内托和运输箱分层显示并可编辑；人物身份与授权单独管理。</p></div><div class="page-heading-actions"><button class="secondary-button" data-create-asset="avatar" type="button">＋ 新增人物</button><button class="primary-button" data-create-asset="product" type="button">＋ 新增产品</button></div></div>
+          <div class="library-tabs"><button class="is-active" type="button" data-library-tab="products">产品库</button><button type="button" data-library-tab="avatars">人物库</button></div>
+          <div class="library-grid" id="library-grid"><div class="page-empty">正在读取知识库…</div></div>
+        </section>
+
+        <section class="app-view full-page-view" id="view-deliveries" data-view-panel="deliveries">
+          <div class="page-heading"><div><span class="eyebrow">只有通过硬门才允许导出</span><h1>批准与最终交付</h1><p>逐张确认、撤销、重新总览、Prompt 对齐与 Word 渲染状态集中在这里。</p></div><button class="primary-button" id="export-docx" type="button" disabled>导出唯一 DOCX</button></div>
+          <div class="delivery-layout">
+            <div class="delivery-main">
+              <div class="approval-gallery" id="approval-gallery"><div class="page-empty">还没有待批准图片。</div></div>
+              <section class="docx-qa-workspace" id="docx-qa-workspace">
+                <div class="docx-qa-heading"><div><span class="eyebrow">Word 最后一门</span><h2>逐页渲染检查</h2></div><span class="status-pill">等待导出</span></div>
+                <div class="page-empty compact">Word 导出后，所有页面会以图片缩略图显示在这里；逐页勾选后才能批准。</div>
+              </section>
+            </div>
+            <aside class="delivery-gates" id="delivery-gates">
+              <h2>最终放行门</h2>
+              <div class="gate-item waiting"><span>1</span><div><strong>原片与新版口播</strong><small>等待项目</small></div></div>
+              <div class="gate-item waiting"><span>2</span><div><strong>SRC / ADD 全覆盖</strong><small>等待项目</small></div></div>
+              <div class="gate-item waiting"><span>3</span><div><strong>图片 QA 与用户回执</strong><small>等待项目</small></div></div>
+              <div class="gate-item waiting"><span>4</span><div><strong>Prompt 编译与图文对齐</strong><small>等待项目</small></div></div>
+              <div class="gate-item waiting"><span>5</span><div><strong>DOCX 全页渲染 QA</strong><small>等待项目</small></div></div>
+            </aside>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <aside class="task-drawer" id="task-drawer" aria-hidden="true">
+      <div class="drawer-heading"><div><span class="eyebrow">当前项目</span><h2>运行中的任务</h2></div><button class="icon-button" id="close-task-drawer" type="button" aria-label="关闭">×</button></div>
+      <div class="drawer-body" id="drawer-task-list"><div class="drawer-empty">暂无运行任务</div></div>
+    </aside>
+    <div class="scrim" id="drawer-scrim" hidden></div>
+
+    <dialog class="app-dialog" id="new-project-dialog">
+      <form method="dialog" id="new-project-form">
+        <div class="dialog-heading"><div><span class="eyebrow">第一步</span><h2>新建视频项目</h2></div><button class="icon-button" type="button" data-close-dialog aria-label="关闭">×</button></div>
+        <label class="drop-zone" id="dialog-drop-zone">
+          <input id="video-file-input" type="file" accept="video/mp4,video/quicktime,video/x-m4v,video/webm" hidden>
+          <span class="drop-zone-icon">▶</span>
+          <strong id="drop-zone-title">拖入原视频，或点击选择</strong>
+          <small id="drop-zone-meta">支持 MP4、MOV、M4V、WebM；文件保存在本地项目目录</small>
+        </label>
+        <label class="form-field"><span>项目名称</span><input id="new-project-name" type="text" placeholder="默认使用视频文件名"></label>
+        <div class="form-grid two">
+          <label class="form-field"><span>初始阶段</span><select id="new-project-tier"><option value="source_intake">先提取原片口播与分镜</option><option value="full_delivery">完整首帧 + Prompt + Word</option><option value="prompt_only">只做逐镜 Prompt</option><option value="first_frame_only">只做首帧</option></select></label>
+          <label class="form-field"><span>任务目标</span><select id="new-project-product-mode"><option value="replace_product">替换产品 / 包装</option></select></label>
+        </div>
+        <div class="dialog-notice">如果还没有确认新版口播，即使选择完整交付，系统也会先进入原片 intake，不会越过必要输入直接乱写 Prompt。</div>
+        <div class="dialog-actions"><button class="secondary-button" type="button" data-close-dialog>取消</button><button class="primary-button" id="create-project-submit" type="submit" value="default" disabled>创建并导入视频</button></div>
+      </form>
+    </dialog>
+
+    <dialog class="app-dialog wide asset-dialog" id="asset-dialog">
+      <form method="dialog" id="asset-form">
+        <div class="dialog-heading"><div><span class="eyebrow" id="asset-dialog-eyebrow">知识库</span><h2 id="asset-dialog-title">新增产品</h2></div><button class="icon-button" type="button" data-close-dialog aria-label="关闭">×</button></div>
+        <input id="asset-kind" type="hidden" value="product">
+        <input id="asset-edit-id" type="hidden" value="">
+        <div class="form-grid two">
+          <label class="form-field"><span>名称</span><input id="asset-name" type="text" required placeholder="例如：达尔顿黄油脆丝棒"></label>
+          <label class="form-field"><span>版本</span><input id="asset-version" type="text" value="1"></label>
+        </div>
+        <div id="product-spec-fields">
+          <div class="asset-contract-intro"><strong>产品主体与四层包装</strong><span>尺寸、装量、结构和文字版面均可单独编辑；未登记的层不会交给模型揣测。</span></div>
+          <div class="section-title-row contract-heading"><h3>产品三轴尺寸 · cm</h3><label class="checkbox-row compact-check"><input id="asset-no-package" type="checkbox"><span>明确无包装</span></label></div>
+          <div class="form-grid three compact-number-grid">
+            <label class="form-field"><span>产品长</span><input id="asset-product-length" type="number" min="0.01" step="0.01" placeholder="11"></label>
+            <label class="form-field"><span>产品宽</span><input id="asset-product-width" type="number" min="0.01" step="0.01" placeholder="1.4"></label>
+            <label class="form-field"><span>产品厚 / 高</span><input id="asset-product-height" type="number" min="0.01" step="0.01" placeholder="1.2"></label>
+          </div>
+          <div id="package-contract-fields">
+            <section class="package-layer-fields">
+              <div class="section-title-row contract-heading"><h3>独立包装</h3><label class="checkbox-row compact-check"><input id="asset-individual-package-present" type="checkbox" checked><span>包含独立包装</span></label></div>
+              <div id="individual-package-fields">
+                <div class="form-grid three compact-number-grid">
+                  <label class="form-field"><span>独立包装长</span><input id="asset-individual-length" type="number" min="0.01" step="0.01" placeholder="15"></label>
+                  <label class="form-field"><span>独立包装宽</span><input id="asset-individual-width" type="number" min="0.01" step="0.01" placeholder="4.5"></label>
+                  <label class="form-field"><span>独立包装厚</span><input id="asset-individual-height" type="number" min="0.01" step="0.01" placeholder="2"></label>
+                </div>
+                <div class="form-grid three">
+                  <label class="form-field"><span>每袋产品数</span><input id="asset-units-per-individual" type="number" min="1" step="1" value="1"></label>
+                  <label class="form-field"><span>封口 / 结构</span><input id="asset-individual-topology" type="text" placeholder="例如：三边热封流动包装"></label>
+                  <label class="form-field"><span>独立包装材质</span><input id="asset-individual-material" type="text" placeholder="例如：金色膜袋、锯齿热封边"></label>
+                </div>
+              </div>
+            </section>
+            <section class="package-layer-fields">
+              <div class="section-title-row contract-heading"><h3>零售盒 / 包装盒</h3><label class="checkbox-row compact-check"><input id="asset-retail-box-present" type="checkbox" checked><span>包含零售盒</span></label></div>
+              <div id="retail-box-fields">
+                <div class="form-grid three compact-number-grid">
+                  <label class="form-field"><span>外盒长</span><input id="asset-box-length" type="number" min="0.01" step="0.01" placeholder="21"></label>
+                  <label class="form-field"><span>外盒宽</span><input id="asset-box-width" type="number" min="0.01" step="0.01" placeholder="14"></label>
+                  <label class="form-field"><span>外盒厚 / 高</span><input id="asset-box-height" type="number" min="0.01" step="0.01" placeholder="6"></label>
+                </div>
+                <div class="form-grid three compact-number-grid">
+                  <label class="form-field"><span>每盒直接容纳数</span><input id="asset-units-per-box" type="number" min="1" step="1" placeholder="6"></label>
+                  <label class="form-field"><span>摆放层数</span><input id="asset-package-layers" type="number" min="1" step="1" placeholder="2"></label>
+                  <label class="form-field"><span>每层直接容纳数</span><input id="asset-units-per-layer" type="number" min="1" step="1" placeholder="3"></label>
+                </div>
+                <div class="form-grid two">
+                  <label class="form-field"><span>盒体形状</span><select id="asset-box-shape"><option value="rectangular_carton">长方体纸盒</option><option value="flat_rectangular_carton">扁长方体纸盒</option><option value="square_carton">正方形纸盒</option><option value="cylindrical_container">圆柱罐</option><option value="custom">其他（在层级中说明）</option></select></label>
+                  <label class="form-field"><span>包装层级补充说明</span><input id="asset-package-containment" type="text" placeholder="例如：零售盒 ＞ 内托 ＞ 独立袋 ＞ 单根"></label>
+                </div>
+                <label class="form-field"><span>正面文字 / Logo / 色块版面硬锁</span><textarea id="asset-package-text-layout" rows="3" placeholder="例如：按“零售盒正面”参考逐面投影；Logo 位于左上，品名居中，主色块在下 1/3；不可重排、改字或镜像。"></textarea></label>
+              </div>
+            </section>
+            <section class="package-layer-fields">
+              <div class="section-title-row contract-heading"><h3>透明内托</h3><label class="checkbox-row compact-check"><input id="asset-inner-tray-present" type="checkbox"><span>包含内托</span></label></div>
+              <div id="inner-tray-fields" hidden>
+                <div class="form-grid three compact-number-grid">
+                  <label class="form-field"><span>内托长</span><input id="asset-inner-tray-length" type="number" min="0.01" step="0.01"></label>
+                  <label class="form-field"><span>内托宽</span><input id="asset-inner-tray-width" type="number" min="0.01" step="0.01"></label>
+                  <label class="form-field"><span>内托高</span><input id="asset-inner-tray-height" type="number" min="0.01" step="0.01"></label>
+                </div>
+                <div class="form-grid two">
+                  <label class="form-field"><span>内托形态</span><input id="asset-inner-tray-topology" type="text" placeholder="例如：六槽透明吸塑内托"></label>
+                  <label class="form-field"><span>每个内托直接容纳数</span><input id="asset-inner-tray-count" type="number" min="1" step="1" value="1"></label>
+                </div>
+              </div>
+            </section>
+            <section class="package-layer-fields">
+              <div class="section-title-row contract-heading"><h3>运输箱</h3><label class="checkbox-row compact-check"><input id="asset-shipping-carton-present" type="checkbox"><span>登记运输箱</span></label></div>
+              <div id="shipping-carton-fields" hidden>
+                <div class="form-grid three compact-number-grid">
+                  <label class="form-field"><span>运输箱长</span><input id="asset-shipping-length" type="number" min="0.01" step="0.01"></label>
+                  <label class="form-field"><span>运输箱宽</span><input id="asset-shipping-width" type="number" min="0.01" step="0.01"></label>
+                  <label class="form-field"><span>运输箱高</span><input id="asset-shipping-height" type="number" min="0.01" step="0.01"></label>
+                </div>
+                <div class="form-grid two">
+                  <label class="form-field"><span>每箱零售盒数</span><input id="asset-boxes-per-shipping" type="number" min="1" step="1"></label>
+                  <label class="form-field"><span>运输箱形态</span><input id="asset-shipping-topology" type="text" placeholder="例如：瓦楞纸开槽箱，胶带封口"></label>
+                </div>
+              </div>
+            </section>
+          </div>
+          <div class="dialog-notice">产品、独立包装、内托、零售盒、运输箱分别登记，参考图也必须标清所属层。所有数字必须是正数厘米；装量必须满足“层数 × 每层数 = 每盒单品数”。这些事实进入不可变产品合同，模型只能引用，不能自己猜。</div>
+        </div>
+        <div class="form-grid two" id="avatar-spec-fields" hidden>
+          <label class="form-field"><span>允许用途</span><select id="asset-usage-scope"><option value="head_only">仅换头</option></select></label>
+          <label class="form-field"><span>授权范围记录</span><input id="asset-authorization-scope" type="text" placeholder="例如：仅当前内部测试项目；不得商业投放"></label>
+        </div>
+        <label class="asset-upload-zone">
+          <input id="asset-file-input" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden>
+          <span>＋ 追加参考图</span><small>编辑资料时可不选新图；如追加，请分别标注正脸/45°，或产品主体/独立包装/内托/零售盒/运输箱</small>
+        </label>
+        <div class="existing-reference-list" id="asset-existing-references" hidden></div>
+        <div class="selected-file-list" id="selected-asset-files">尚未选择图片</div>
+        <div class="reference-role-list" id="reference-role-list"></div>
+        <label class="form-field"><span>硬约束与禁止变化</span><textarea id="asset-notes" rows="5" placeholder="产品可写尺寸、数量、材质、包装；人物可写授权范围、发型、禁止继承背景等。"></textarea></label>
+        <label class="checkbox-row"><input id="asset-rights" type="checkbox"><span>该素材已取得当前用途所需授权</span></label>
+        <div class="dialog-actions"><button class="secondary-button" type="button" data-close-dialog>取消</button><button class="primary-button" id="save-asset" type="submit" value="default">保存到知识库</button></div>
+      </form>
+    </dialog>
+
+    <dialog class="app-dialog wide" id="shot-selection-dialog">
+      <form method="dialog">
+        <div class="dialog-heading"><div><span class="eyebrow">作用范围</span><h2>逐镜选择替换范围</h2></div><button class="icon-button" type="button" data-close-dialog aria-label="关闭">×</button></div>
+        <div class="shot-selection-grid" id="shot-selection-grid"><div class="dialog-notice">还没有分镜。请先运行原片分析。</div></div>
+        <div class="dialog-actions"><button class="secondary-button" type="button" data-close-dialog>取消</button><button class="primary-button" id="confirm-shot-selection" type="button">确认镜头范围</button></div>
+      </form>
+    </dialog>
+
+    <dialog class="app-dialog" id="split-plan-dialog">
+      <form method="dialog" id="split-plan-form">
+        <div class="dialog-heading"><div><span class="eyebrow">长镜头动作拍拆分</span><h2>拆分 <span id="split-plan-unit">未选择镜头</span></h2></div><button class="icon-button" type="button" data-close-dialog aria-label="关闭">×</button></div>
+        <label class="form-field"><span>拆分时点 · 秒</span><input id="split-plan-cursor" type="number" min="0" step="0.001" required></label>
+        <div class="form-grid two">
+          <label class="form-field"><span>前一拍动作</span><input id="split-plan-label-a" type="text" maxlength="120" value="动作起势与停顿" required></label>
+          <label class="form-field"><span>后一拍动作</span><input id="split-plan-label-b" type="text" maxlength="120" value="关键动作与反应" required></label>
+        </div>
+        <label class="form-field"><span>为什么要拆</span><textarea id="split-plan-reason" rows="3" maxlength="2000" placeholder="例如：原镜 6.8 秒内先掰断、再展示断面、最后吃；必须按可见动作拍分成独立生成单元。"></textarea></label>
+        <div class="split-plan-preview" id="split-plan-preview"><strong>尚未创建计划</strong><small>先预览两段准确时码；只有点击“确认写入分镜”才会更改 canonical 分镜。</small></div>
+        <div class="dialog-notice">确认后原 unit 会被替换成两个新 unit，旧交付图不会继承；系统会要求局部重编译、重新出图和重跑检测。</div>
+        <div class="dialog-actions"><button class="secondary-button" type="button" data-close-dialog>取消</button><button class="secondary-button" id="preview-split-plan" type="button">生成拆分预览</button><button class="primary-button" id="confirm-split-plan" type="button" disabled>确认写入分镜</button></div>
+      </form>
+    </dialog>
+
+    <dialog class="app-dialog" id="result-upload-dialog">
+      <form method="dialog" id="result-upload-form">
+        <div class="dialog-heading"><div><span class="eyebrow">生成结果回收</span><h2>导入到 <span id="result-upload-unit">未选择镜头</span></h2></div><button class="icon-button" type="button" data-close-dialog aria-label="关闭">×</button></div>
+        <div class="form-grid two">
+          <label class="form-field"><span>结果类型</span><select id="result-upload-kind"><option value="first_frame">首帧 / 画面结果</option><option value="video">视频结果</option></select></label>
+          <label class="form-field"><span>版本</span><input id="result-upload-version" type="text" value="v1" maxlength="100"></label>
+        </div>
+        <label class="asset-upload-zone" for="result-file-input">
+          <input id="result-file-input" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+          <span id="result-file-title">＋ 选择首帧图片</span><small id="result-file-meta">PNG、JPG、WebP；文件会复制到当前项目并计算哈希</small>
+        </label>
+        <label class="form-field"><span>备注 / 本次修复点</span><textarea id="result-upload-notes" rows="4" maxlength="4000" placeholder="例如：SRC11 v3，已修正包装盒长宽比与手指接触；等待人物一致性和产品尺寸审核。"></textarea></label>
+        <div class="dialog-notice">导入只表示“结果已回收”，不会自动算批准。你仍需在“批准与最终交付”逐张确认；撤销后交付门会重新关闭。</div>
+        <div class="dialog-actions"><button class="secondary-button" type="button" data-close-dialog>取消</button><button class="primary-button" id="save-shot-result" type="submit" value="default" disabled>导入并进入审核</button></div>
+      </form>
+    </dialog>
+
+    <dialog class="app-dialog" id="new-task-dialog">
+      <form method="dialog" id="new-task-form">
+        <div class="dialog-heading"><div><span class="eyebrow">项目内新建</span><h2>新建 Codex 任务</h2></div><button class="icon-button" type="button" data-close-dialog aria-label="关闭">×</button></div>
+        <label class="form-field"><span>所属项目</span><select id="new-task-project"><option value="">请先选择项目</option></select></label>
+        <div class="form-grid two">
+          <label class="form-field"><span>任务类型</span><select id="new-task-operation"><option value="analyze">分析原片与拆分镜</option><option value="run">运行当前项目总控</option><option value="codex">Codex 单任务</option><option value="compile">编译逐镜 Prompt</option><option value="extract_frames">提取候选帧</option><option value="verify">交付验证</option></select></label>
+          <label class="form-field"><span>创建后</span><select id="new-task-start-mode"><option value="start">立即启动</option><option value="queue">只创建，稍后启动</option></select></label>
+        </div>
+        <label class="form-field"><span>补充要求（可选）</span><textarea id="new-task-instruction" rows="5" maxlength="8000" placeholder="例如：优先检查吃镜头、掰开镜头与人物情绪；只处理当前选中的分镜。"></textarea></label>
+        <div class="dialog-notice" id="new-task-scope-summary">任务会固化当前项目；单镜返工仍从具体分镜的“返工本镜”发起，避免把项目全部分镜伪装成某个任务的子节点。</div>
+        <div class="dialog-actions"><button class="secondary-button" type="button" data-close-dialog>取消</button><button class="primary-button" id="create-task-submit" type="submit" value="default">创建任务</button></div>
+      </form>
+    </dialog>
+
+    <dialog class="app-dialog" id="project-settings-dialog">
+      <form method="dialog" id="project-settings-form">
+        <div class="dialog-heading"><div><span class="eyebrow">项目执行合同</span><h2>项目设置</h2></div><button class="icon-button" type="button" data-close-dialog aria-label="关闭">×</button></div>
+        <div class="form-grid two">
+          <label class="form-field"><span>交付阶段</span><select id="settings-execution-tier"><option value="source_intake">原片提取与分镜</option><option value="diagnose_only">只诊断现有项目</option><option value="first_frame_only">只做首帧</option><option value="prompt_only">只做逐镜 Prompt</option><option value="full_delivery">完整首帧 + Prompt + Word</option></select></label>
+          <label class="form-field"><span>任务拓扑</span><select id="settings-task-mode"><option value="dual">总控 + 图/文并行</option><option value="single">单任务总控</option></select></label>
+        </div>
+        <label class="checkbox-row"><input id="settings-prompt-length-enabled" type="checkbox"><span>显式启用每镜 Prompt 字数硬门</span></label>
+        <div class="form-grid two" id="settings-prompt-length-bounds" hidden>
+          <label class="form-field"><span>最少非空白字符</span><input id="settings-prompt-length-minimum" type="number" min="1" step="1" value="3000"></label>
+          <label class="form-field"><span>最多非空白字符</span><input id="settings-prompt-length-maximum" type="number" min="1" step="1" value="4000"></label>
+        </div>
+        <div class="dialog-notice" id="settings-prompt-length-status">默认关闭字数上下限，按最短可执行 Prompt 编译。只有目标平台明确要求时才打开；一旦打开，上下限同时成为硬门，但吃/掰拆镜、人物情绪和证据覆盖仍单独校验，不能靠重复水词凑字。</div>
+        <label class="checkbox-row"><input id="settings-codex-enabled" type="checkbox"><span>允许这个项目启动本机 Codex CLI 执行任务</span></label>
+        <div class="dialog-notice">Codex 默认关闭。打开后，仍需你在任务中心明确启动；等待口播、人物授权或参考素材时会显示“等待输入”，不会伪装成已完成。</div>
+        <div class="dialog-actions"><button class="secondary-button" type="button" data-close-dialog>取消</button><button class="primary-button" id="save-project-settings" type="submit" value="default">保存设置</button></div>
+      </form>
+    </dialog>
+
+    <input id="product-reference-input" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden>
+    <input id="avatar-reference-input" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden>
+    <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+  </div>
+  <script src="/app.js?v=20260825-13" defer></script>
+</body>
+</html>
