@@ -57,6 +57,18 @@ python3 install.py --force
 
 安装器会先替换同名 Skill，并保留旧目录的安全迁移逻辑；安装完成后重启 Codex。
 
+## V3 Canonical（当前发布版）
+
+V3 在 V2 的源帧哈希、改稿失效、Seedream 请求校验和 Canonical DOCX 门禁基础上，补充了适合新手的自然语言指挥教程与可视化流程图。V2 目录仍保留用于兼容旧项目；新项目优先调用 V3。
+
+先读 [`docs/V3-小白操作教程.md`](docs/V3-小白操作教程.md)，再安装并调用 `video-remix-system-v3-canonical`：
+
+```bash
+python3 install.py --force
+```
+
+安装器会同时安装 V2 兼容目录和 V3 当前发布目录。静态图仍由 Seedream/Ark 执行，视频后端需要单独配置；没有生成结果时，V3 会阻断完整 DOCX，不会把缺图文档当成最终交付。
+
 ## 调用方式
 
 把视频发给 Codex，并使用以下任一说法：

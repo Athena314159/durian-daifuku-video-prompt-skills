@@ -15,6 +15,7 @@ SKILLS = (
     "director-skill",
     "product-skill",
     "video-remix-system-v2-canonical",
+    "video-remix-system-v3-canonical",
 )
 
 LEGACY_SKILLS = (

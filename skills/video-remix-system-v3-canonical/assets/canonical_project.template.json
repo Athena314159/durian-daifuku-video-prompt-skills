@@ -1,0 +1,63 @@
+{
+  "project_id": "example-project",
+  "source_video": "/absolute/path/source.mp4",
+  "source_video_sha256": "replace-with-source-video-sha256",
+  "target_duration_seconds": 20.0,
+  "operation_mode": "prompt_only",
+  "source_intake_file": "/absolute/path/source_intake.json",
+  "script_version": "replace-with-script-sha256",
+  "performance_contract_version": "2.1-source-evidence",
+  "project_rules": {
+    "eating_policy": {"threshold_seconds": 20, "base_target": 3, "extra_every_seconds": 10},
+    "two_hand_tear_minimum": 2,
+    "source_shot_order_locked": true,
+    "performance_evidence_contract": true
+  },
+  "video_generation_provider": null,
+  "image_generation_provider": {
+    "type": "seedream",
+    "model": "seedream-5.0-pro",
+    "mode": "image_generation",
+    "notes": "用于静态产品图、源帧局部替换和视频首帧；正式提交由provider执行器完成"
+  },
+  "immutable_speaker_key": "A",
+  "semantic_role_performance_gate_file": "/absolute/path/semantic_role_performance_gate.json",
+  "source_coverage": {"required_source_shot_ids": ["SRC001"]},
+  "roles": [
+    {"role_id": "Person-01", "screen_status": "on_screen"}
+  ],
+  "script_lines": [
+    {"line_id": "L001", "text": "示例口播一。", "speaker_id": "Person-01", "screen_status": "on_screen"},
+    {"line_id": "L002", "text": "示例口播二。", "speaker_id": "Person-01", "screen_status": "on_screen"}
+  ],
+  "generation_shots": [
+    {
+      "shot_id": "S001",
+      "source_shot_ids": ["SRC001"],
+      "shot_mode": "person_visible",
+      "source_state_contract": {
+        "source_visible_objects": [],
+        "allowed_product_states": ["route_from_source_action"],
+        "allowed_packaging_levels": ["source_frame_region"]
+      },
+      "source_frame": "/absolute/path/frame001.png",
+      "source_frame_sha256": "replace-me",
+      "duration_seconds": 5.0,
+      "script_capacity": 2,
+      "line_ids": ["L001", "L002"],
+      "source_action": "按源片动作复现",
+      "product_state": "route_from_source_action",
+      "bbox_xywh": [0, 0, 100, 100],
+      "scale_anchors": ["same_depth_hand"],
+      "prompt_file": "/absolute/path/prompts_canonical_v3/S001.md"
+    }
+  ],
+  "eating_occurrences": [],
+  "two_hand_tear_occurrences": [],
+  "eating_frame_candidates": [
+    {"shot_id": "S001", "source_frame": "/absolute/path/frame001.png", "source_frame_sha256": "replace-me", "score": 1.0}
+  ],
+  "tear_frame_candidates": [
+    {"shot_id": "S001", "source_frame": "/absolute/path/frame001.png", "source_frame_sha256": "replace-me", "score": 1.0}
+  ]
+}

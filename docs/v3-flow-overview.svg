@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360">
+  <rect width="1200" height="360" fill="#f7f8fa"/>
+  <text x="60" y="55" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#111827">V3 Canonical 小白流程</text>
+  <g font-family="Arial, sans-serif" font-size="18" text-anchor="middle">
+    <rect x="55" y="115" width="190" height="130" rx="18" fill="#dbeafe" stroke="#2563eb" stroke-width="3"/>
+    <text x="150" y="158" fill="#1e3a8a">1 交源视频</text><text x="150" y="190" fill="#1e3a8a">返回原口播</text><text x="150" y="220" fill="#1e3a8a">锁源镜头与哈希</text>
+    <rect x="300" y="115" width="190" height="130" rx="18" fill="#fef3c7" stroke="#d97706" stroke-width="3"/>
+    <text x="395" y="158" fill="#78350f">2 交完整改稿</text><text x="395" y="190" fill="#78350f">记录 line ID</text><text x="395" y="220" fill="#78350f">标记受影响镜头</text>
+    <rect x="545" y="115" width="190" height="130" rx="18" fill="#dcfce7" stroke="#16a34a" stroke-width="3"/>
+    <text x="640" y="158" fill="#14532d">3 编译任务</text><text x="640" y="190" fill="#14532d">换头 + 大福</text><text x="640" y="220" fill="#14532d">盒/袋参考入清单</text>
+    <rect x="790" y="115" width="150" height="130" rx="18" fill="#fce7f3" stroke="#db2777" stroke-width="3"/>
+    <text x="865" y="158" fill="#831843">4 Seedream</text><text x="865" y="190" fill="#831843">先干跑</text><text x="865" y="220" fill="#831843">再提交静态图</text>
+    <rect x="995" y="115" width="150" height="130" rx="18" fill="#ede9fe" stroke="#7c3aed" stroke-width="3"/>
+    <text x="1070" y="158" fill="#4c1d95">5 DOCX</text><text x="1070" y="190" fill="#4c1d95">图文哈希</text><text x="1070" y="220" fill="#4c1d95">全通过才导出</text>
+  </g>
+  <g stroke="#64748b" stroke-width="4" fill="none" marker-end="url(#arrow)"><path d="M245 180H292"/><path d="M490 180H537"/><path d="M735 180H782"/><path d="M940 180H987"/></g>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#64748b"/></marker></defs>
+  <text x="600" y="310" font-family="Arial, sans-serif" font-size="17" text-anchor="middle" fill="#475569">任何一步失败：修对应阶段，旧产物进入过期状态，不继续硬导出</text>
+</svg>
