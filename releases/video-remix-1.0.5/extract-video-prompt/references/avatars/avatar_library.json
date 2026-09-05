@@ -1,0 +1,59 @@
+{
+  "schema_version": "1.1",
+  "version": 2,
+  "avatars": [
+    {
+      "id": "AV-001",
+      "name": "人物1",
+      "active": true,
+      "portrait_rights_cleared": true,
+      "authorization_basis": "用户直接提供5张参考图并明确要求写入Skill知识库用于换脸",
+      "usage_scope": "user_skill_library",
+      "identity_traits": [
+        "成年东亚女性",
+        "偏椭圆小脸与圆润收窄下颌",
+        "大而圆的深色眼睛与自然双眼皮",
+        "平直略弧深色眉",
+        "窄鼻梁与小巧圆润鼻头",
+        "自然粉红唇与整齐上排牙齿",
+        "深棕近黑色顺直及肩发，偏中分斜刘海",
+        "清透自然妆感与暖中性肤色"
+      ],
+      "forbidden_changes": [
+        "不得改变人物1的脸型、眼型、鼻型、眉形、年龄和肤色",
+        "不得改成尖锐锥子脸、夸张欧式双眼皮或高耸鼻梁",
+        "不得改变深色及肩直发与斜分结构",
+        "不得继承参考图背景、旧食品、字幕、水印或平台UI"
+      ],
+      "reference_assets": {
+        "front": "assets/avatars/person-1/person1_front_speaking_identity.png",
+        "front_speaking": "assets/avatars/person-1/person1_front_speaking_identity.png",
+        "front_product_expression": "assets/avatars/person-1/person1_front_product_expression_identity.png",
+        "left_45": "assets/avatars/person-1/person1_left_45_downward_identity.png",
+        "right_45": null,
+        "profile": null,
+        "upper_body": null,
+        "expressions": [
+          "assets/avatars/person-1/person1_front_speaking_identity.png",
+          "assets/avatars/person-1/person1_front_smile_identity.png",
+          "assets/avatars/person-1/person1_front_product_expression_identity.png"
+        ]
+      },
+      "reference_limitations": [
+        "当前激活库保留从用户原图确定性裁切的正面、微笑、产品表情和左45度身份图；仍缺少右45度与90度侧脸参考",
+        "身份图只提供脸型、五官、发型和对应表情，不提供背景、家具、服装、身体动作、手势、旧产品、字幕或光线",
+        "目标镜头的场景、构图、人物位置、身体、服装、动作、机位和光线只能来自同编号原视频首帧；若身份图中的米色墙、沙发、窗、植物或暖光进入结果，立即标记 AVATAR_BACKGROUND_LEAKAGE 并拒收",
+        "旧 person1_front_speaking_transparent.png 为生成式抠图，已因身份漂移停用，不得再作为换脸依据"
+      ]
+    }
+  ],
+  "selection_policy": {
+    "require_portrait_rights": true,
+    "match_source_age_presentation": true,
+    "match_source_pose_and_lighting": true,
+    "do_not_change_identity_without_explicit_selection": true,
+    "avatar_reference_is_identity_only": true,
+    "source_frame_is_sole_scene_authority": true,
+    "reject_code_for_background_leakage": "AVATAR_BACKGROUND_LEAKAGE"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0",
+  "project_id": null,
+  "canonical_prompt_source": "prompts",
+  "generated_at": null,
+  "shots": [],
+  "summary": {
+    "shot_count": 0,
+    "aligned_count": 0,
+    "blocked_count": 0,
+    "status": "pending"
+  }
+}

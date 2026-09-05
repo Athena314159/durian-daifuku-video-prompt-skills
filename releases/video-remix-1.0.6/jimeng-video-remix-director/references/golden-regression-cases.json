@@ -1,0 +1,166 @@
+{
+  "schema_version": "video-remix-golden-cases-v1.0",
+  "bundle_release_id": "video-remix-1.0.6",
+  "cases": [
+    {
+      "case_id": "GOLDEN-DAIFUKU-SCALE-001",
+      "protects": "durian_daifuku_v2_scale_surface_filling_endpoint_locked",
+      "expectation": "榴莲大福 v2 每镜必须绑定 physical_consistency、原食品尺度角色和可靠同景深锚点；盘装镜没有已知容器尺寸或批准场景尺度母资产时阻断。"
+    },
+    {
+      "case_id": "GOLDEN-DAIFUKU-PIXEL-PREFLIGHT-001",
+      "protects": "durian_daifuku_generation_requires_pixel_preflight",
+      "expectation": "任何榴莲大福生图前必须在精确原帧测量同景深锚点，计算目标像素宽高与边界框，生成并哈希绑定几何引导图；纯文字尺度不能授权生图。"
+    },
+    {
+      "case_id": "GOLDEN-DAIFUKU-NO-BLIND-GENERATION-001",
+      "protects": "no_blind_daifuku_generation_retry",
+      "expectation": "一个有效像素计划只允许一次初始生成；尺寸失败后不得用完全相同的原帧、引导图和 Prompt 盲重试，必须改变可审计变量或使用确定性局部编辑。"
+    },
+    {
+      "case_id": "GOLDEN-DAIFUKU-REFERENCE-ROLE-001",
+      "protects": "product_references_require_role_boundaries",
+      "expectation": "每张产品参考必须有批准资产、唯一角色、允许/禁止继承和允许状态；逐镜角色与 product_references 双向一一对应。"
+    },
+    {
+      "case_id": "GOLDEN-DAIFUKU-KNOWLEDGE-SCOPE-001",
+      "protects": "knowledge_seed_scoped_to_product_profile",
+      "expectation": "初始化 durian-daifuku-v2 自动复制参考资产并写入非空知识库；所有大福条目按 product_profile 匹配，不能污染其他产品。"
+    },
+    {
+      "case_id": "GOLDEN-DAIFUKU-SURFACE-001",
+      "protects": "durian_daifuku_v2_scale_surface_filling_endpoint_locked",
+      "expectation": "产品主合同保留侧向柔光可见、不可逐粒辨认的极薄细糯米粉雾层，不能退化成完全无粉面团或粗粉点。"
+    },
+    {
+      "case_id": "GOLDEN-DAIFUKU-FILLING-001",
+      "protects": "durian_daifuku_v2_scale_surface_filling_endpoint_locked",
+      "expectation": "内馅至少90%为连续浓稠果泥，禁止可数疙瘩、米粒、孔洞、蜂窝和拉丝。"
+    },
+    {
+      "case_id": "GOLDEN-DAIFUKU-OPENING-SEED-001",
+      "protects": "durian_daifuku_v2_scale_surface_filling_endpoint_locked",
+      "expectation": "opening_window_seed 在首次微露馅后立即停止，可见馅面积不超过约5%、两侧无空气间隙，不能进入临断、两半或断面展示。"
+    },
+    {
+      "case_id": "GOLDEN-SOURCE-TRUTH-001",
+      "protects": "source_truth_precedes_inference",
+      "expectation": "可观察事实与导演推断分开保存；推断必须引用原片时间、动作、视线、表情或声音证据。"
+    },
+    {
+      "case_id": "GOLDEN-NARRATIVE-001",
+      "protects": "narrative_before_six_layer_detail",
+      "expectation": "人物镜先形成情境、触发、意图、动作、反馈、情绪转折与镜头落点，再把适用六层融入逐时动作。"
+    },
+    {
+      "case_id": "GOLDEN-AUDIT-LEAK-001",
+      "protects": "audit_fields_internal_only",
+      "expectation": "status、confidence、gap、not_visible、not_applicable、template_supplement 不得进入可复制 Prompt。"
+    },
+    {
+      "case_id": "GOLDEN-NEGATIVE-PADDING-001",
+      "protects": "negative_constraint_ratio_lte_0_15",
+      "expectation": "限制语只能进入最小纠错附录，超过 15% 或以同义限制凑字时阻断。"
+    },
+    {
+      "case_id": "GOLDEN-LENGTH-001",
+      "protects": "length_contract_project_owned",
+      "expectation": "只有项目明确启用时才检查完整上下限；扩写只增加有依据的叙事、动作、情绪、物理、摄影与声音。"
+    },
+    {
+      "case_id": "GOLDEN-NO-FILLER-001",
+      "protects": "length_never_filled_with_constraints_or_repetition",
+      "expectation": "启用长度合同时，限制词、同义重复、审计字段、跨镜模板和虚构动作不得承担字符下限。"
+    },
+    {
+      "case_id": "GOLDEN-POST-BITE-001",
+      "protects": "post_bite_does_not_invent_bite_or_swallow",
+      "expectation": "原片从咬后闭口咀嚼开始时，不补造送入口、咬断、吞咽、嗯声或吃后反应。"
+    },
+    {
+      "case_id": "GOLDEN-AUDIO-SHOT-SPECIFIC-001",
+      "protects": "six_layers_integrated_not_six_sections",
+      "expectation": "每镜声源与停声说明只描述本镜真实动作，普通镜不得复制吃食或掰断窗口。"
+    },
+    {
+      "case_id": "GOLDEN-DOCX-001",
+      "protects": "final_user_artifact_docx_only",
+      "expectation": "full_delivery 最终用户输出只有原生可编辑 DOCX，内部 JSON/TXT/表格不得替代或陪同。"
+    },
+    {
+      "case_id": "GOLDEN-VERSION-PIN-001",
+      "protects": "existing_projects_do_not_auto_upgrade",
+      "expectation": "项目锁定 bundle_release_id 与 prompt_authoring_contract；升级必须显式迁移并重跑全部回归。"
+    },
+    {
+      "case_id": "GOLDEN-COMMERCIAL-EMOTION-001",
+      "protects": "commercial_emotion_requires_source_evidence",
+      "expectation": "人物镜的主情绪、次级情绪、暗流、余韵和带货转折必须回指原片时码/动作/表情/声音，并落成可见表演。"
+    },
+    {
+      "case_id": "GOLDEN-BEAT-RHYTHM-001",
+      "protects": "action_beats_cover_timeline_without_padding",
+      "expectation": "动作节拍从镜内0秒无缝覆盖至结束；占位语、几秒多事件一笔带过、漏吃/漏掰断阶段均阻断。"
+    },
+    {
+      "case_id": "GOLDEN-GALLERY-USER-APPROVAL-001",
+      "protects": "word_requires_hash_bound_user_gallery_approval",
+      "expectation": "完整逐图总览按锁定顺序展示，用户确认回执绑定每张图 SHA-256 后，图片才可进入 Word。"
+    },
+    {
+      "case_id": "GOLDEN-PACKAGE-INTEGRATION-001",
+      "protects": "package_geometry_light_and_contact_shadow_are_hard_gates",
+      "expectation": "逐盒正面/厚度比例、同规格尺寸、场景主光、接触影、边缘融合和非平面贴图同时通过。"
+    },
+    {
+      "case_id": "GOLDEN-REVOCATION-CASCADE-001",
+      "protects": "asset_revocation_invalidates_downstream_delivery",
+      "expectation": "撤销任一图片立即让 workflow、generation pack、export manifest、旧用户回执和旧 Word 失效。"
+    },
+    {
+      "case_id": "GOLDEN-WORD-NO-SIX-LAYER-COLUMN-001",
+      "protects": "six_layer_audit_never_renders_as_word_column",
+      "expectation": "六层证据保留在内部 manifest 并融入 Prompt，不在用户 Word 生成六层证据栏目。"
+    },
+    {
+      "case_id": "GOLDEN-PROMPT-ONLY-NO-IMAGES-001",
+      "protects": "prompt_only_compiles_without_delivery_assets",
+      "expectation": "prompt_only 不要求批准生成首帧、成品图或图库回执，但仍须通过完整叙事、角色、SRC/ADD、六层、动作、口播与产品结构门禁。"
+    },
+    {
+      "case_id": "GOLDEN-NONCANONICAL-PROMPT-001",
+      "protects": "noncanonical_prompt_bypass_rejected",
+      "expectation": "prompts 根目录的手写总控 Markdown 触发 NON_CANONICAL_PROMPT_BYPASS，不能冒充编译器输出。"
+    },
+    {
+      "case_id": "GOLDEN-PROMPT-RECEIPT-001",
+      "protects": "prompt_delivery_requires_compile_receipt",
+      "expectation": "只有逐镜 Prompt、generation pack、canonical 输入哈希、汇总稿、workflow 与编译回执全部同批且验证通过时才授权交付。"
+    },
+    {
+      "case_id": "GOLDEN-LEGACY-IMAGE-GENERATION-BLOCK-001",
+      "protects": "legacy_projects_require_explicit_migration_before_execution",
+      "expectation": "旧 release 或 durian-daifuku-v1 项目在当前 Skill 中只读；生图、改图或编译前必须建立非破坏显式迁移副本。"
+    },
+    {
+      "case_id": "GOLDEN-ATOMIC-IDENTITY-PRODUCT-EDIT-001",
+      "protects": "identity_and_product_replacement_are_atomic",
+      "expectation": "同镜同时换身份与换产品时必须从同一精确原始帧在一个授权请求中完成，两项在同一候选上联合通过。"
+    },
+    {
+      "case_id": "GOLDEN-RETURN-TO-ORIGINAL-001",
+      "protects": "failed_candidates_never_become_retry_inputs",
+      "expectation": "任一联合 QA 失败的候选只可诊断，重试固定返回精确原始 source_first_frame，禁止半成品叠修或局部成功字段冻结。"
+    },
+    {
+      "case_id": "GOLDEN-GENERATION-REQUEST-RECEIPT-001",
+      "protects": "image_generation_requires_hash_bound_authorization",
+      "expectation": "生图前授权逐项绑定 release、原始帧、Prompt、人物参考、产品参考、产品合同与尺寸导引图；任一哈希变化立即失效。"
+    },
+    {
+      "case_id": "GOLDEN-JOINT-RESULT-RECEIPT-001",
+      "protects": "approved_first_frames_require_joint_result_receipts",
+      "expectation": "批准首帧必须匹配联合结果回执与输出 SHA-256；身份或产品只通过一项、尺寸超差或材质/终点失败均不能提升。"
+    }
+  ]
+}

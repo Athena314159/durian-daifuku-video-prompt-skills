@@ -1,0 +1,51 @@
+{
+  "schema_version": "2.0",
+  "project_id": "20260825-release-1-0-10-review",
+  "candidates": [
+    {
+      "candidate_id": "CAND-DAIFUKU-TOPOLOGY-INVENTORY-LAYOUT-001",
+      "category": "product_state_and_cross_shot_continuity",
+      "observed_problem": "A generated mouth-contact image can expose a large excavated crater that is neither a whole daifuku nor a real bite. Source shots holding two or three foods can collapse to one target item; equal-size instances can become clones; stacked items lack elastic contact flattening; package layouts become perfect grids; and plate inventory can fail to decrease after pickup.",
+      "proposed_rule": "Require structured integrity, instance and conditional arrangement locks; reject non-bite crater topology; preserve source instance count absent a visible event; separate shared size class from unique handmade variants; model only local contact flattening; require naturally irregular package placement; and validate stable container inventory and pickup arithmetic across shots.",
+      "scope": "cross_project",
+      "evidence": [
+        "user screenshot SHA-256 2f0b936124379f59514c85774d18574f7038312ed4de88d17db68de3136e6b35 shows a peeled/excavated open basin with smeared filling and no localized tooth-created concave notch",
+        "user explicitly requires source two/three-product counts to be preserved",
+        "user explicitly distinguishes shared overall size from lively non-identical morphology",
+        "user explicitly requires natural non-grid package layout and cross-shot container inventory decrement"
+      ],
+      "target_skill": "jimeng-video-remix-director + durian-daifuku-five-states",
+      "target_resource": "durian-daifuku-v2 profile; pipeline validation/compiler; image result gate; migration; product references",
+      "risk_level": "high",
+      "interaction_surfaces": [
+        "product state topology",
+        "multi-instance count and geometry",
+        "canonical prompt compilation",
+        "image result QA receipts",
+        "packaging naturalism",
+        "cross-shot plate/container continuity",
+        "legacy project migration"
+      ],
+      "regression_case_ids": [
+        "GOLDEN-DAIFUKU-FAKE-BITE-CRATER-001",
+        "GOLDEN-DAIFUKU-SOURCE-COUNT-002",
+        "GOLDEN-DAIFUKU-NONCLONE-SAME-SIZE-003",
+        "GOLDEN-DAIFUKU-CONTACT-FLATTENING-004",
+        "GOLDEN-DAIFUKU-NATURAL-PACKAGE-LAYOUT-005",
+        "GOLDEN-DAIFUKU-PICKUP-INVENTORY-006"
+      ],
+      "replaces": [
+        "generic bitten prose that did not distinguish a tooth-created notch from a peeled or excavated cavity",
+        "shot count prose without source-versus-target arithmetic and stable instance IDs",
+        "cross-context geometry identity that could be misread as identical cloned silhouettes",
+        "package shape QA without layout naturalism",
+        "per-shot continuity prose without cross-shot container inventory transitions"
+      ],
+      "rollback_trigger": "Any excavated crater can pass as bitten, any no-event source count can change, any multi-instance clone or invalid contact deformation can pass, any perfect-grid package layout can pass, or any pickup can leave container inventory unchanged.",
+      "status": "approved",
+      "user_approved": true,
+      "reviewed_at": "2026-08-25T17:10:00+08:00",
+      "review_reason": "User explicitly requested these failures be fixed and applied to the active workflow. Candidate remains isolated until paired release gate passes."
+    }
+  ]
+}

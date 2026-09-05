@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "asset_group_id": "individual-pouch-v1",
+  "approval": {
+    "status": "user_approved_for_knowledge_base",
+    "approved": true,
+    "user_approved": true,
+    "approved_at": "2026-08-25T19:30:00+08:00",
+    "scope": "individual_pouch_identity_geometry_and_visible_panel_layout"
+  },
+  "identity": {
+    "package_level": "individual_pouch",
+    "container": "transparent_single-unit-film-pouch-with-brown-tray",
+    "not_equivalent_to": ["retail_outer_box", "shipping_carton"]
+  },
+  "assets": [
+    {
+      "id": "DF2-PACK-POUCH-FRONT-01",
+      "path": "assets/individual-pouch-v1/front-user.png",
+      "sha256": "849eb4fe3bad88277466b32ebfc88a366300af457999df94dde80bf7700a5c08",
+      "role": "individual_pouch_front_artwork_geometry_only",
+      "visible_face": "front",
+      "allowed_inheritance": ["透明单颗膜袋", "棕色内托", "正面黑绿文字与可见布局", "袋体比例与封边"],
+      "forbidden_inheritance": ["实拍手部身份", "房间背景", "拍摄构图", "包装内产品作为大福本体母版"]
+    },
+    {
+      "id": "DF2-PACK-POUCH-SIDE-01",
+      "path": "assets/individual-pouch-v1/side-user.png",
+      "sha256": "872dccf45842b3de007922ab10086b73307e9f5bb116bbfff79caa83a913c2dd",
+      "role": "individual_pouch_side_geometry_only",
+      "visible_face": "side",
+      "allowed_inheritance": ["透明袋侧视厚度", "棕色内托", "封边与内容物承托关系"],
+      "forbidden_inheritance": ["实拍手部身份", "房间背景", "拍摄构图", "包装内产品作为大福本体母版"]
+    }
+  ],
+  "generation_policy": {
+    "exact_visible_face_binding_required": true,
+    "invented_artwork_allowed": false,
+    "source_capture_background_is_reference_only": true
+  }
+}

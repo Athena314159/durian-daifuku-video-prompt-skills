@@ -1,0 +1,496 @@
+#!/usr/bin/env python3
+"""Regression tests for the durian-daifuku-v2 integration contract."""
+
+from __future__ import annotations
+
+import copy
+import json
+import sys
+import tempfile
+from pathlib import Path
+
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from init_project import initialize_project, load_json, write_json  # noqa: E402
+from migrate_durian_daifuku_v2 import active_legacy_contamination, migrate, rebind_current_execution_basis  # noqa: E402
+from pipeline import compile_shot, validate_durian_daifuku_v2_sequence, validate_durian_daifuku_v2_shot  # noqa: E402
+
+
+def role(asset: dict) -> dict:
+    return {
+        "asset_id": asset["id"],
+        "role": asset["role"],
+        "allowed_inheritance": asset["allowed_inheritance"],
+        "forbidden_inheritance": asset["forbidden_inheritance"],
+    }
+
+
+def opening_state(product: dict) -> dict:
+    assets = {item["id"]: item for item in product["reference_assets"]}
+    selected = [assets["DF2-SURFACE-01"], assets["DF2-OPENING-SEED-01"]]
+    return {
+        "profile": "durian-daifuku-v2",
+        "state": "opening_window_seed",
+        "count": 1,
+        "packaging": "none",
+        "shot_specific_traits": ["中央首次微露馅后立即停止"],
+        "scale_lock": {
+            "mode": "physical_consistency",
+            "source_scale_role": "pose_only_incompatible_scale",
+            "anchor": {
+                "type": "index_finger_mid",
+                "expected_ratio": [3.5, 4.0],
+                "evidence": "同景深接触食指中段可见，完整可重建宽度可直接复核",
+            },
+        },
+        "shape_lock": {
+            "geometry_identity_id": "DF2-ROUND-7CM-001",
+            "silhouette_family": "rounded_slightly_oblate",
+            "cross_context_identity_required": True,
+            "container_shape_inheritance": False,
+            "maximum_straight_edge_fraction": 0.18,
+            "maximum_right_angle_corner_count": 0,
+        },
+        "integrity_lock": {
+            "declared_state": "opening_window_seed",
+            "opening_origin": "two_hand_tension",
+            "filling_visibility": "state_bounded_opening",
+            "whole_shell_closed": False,
+            "large_excavated_crater": False,
+            "peeled_top_cap": False,
+            "scooped_hollow": False,
+            "open_basin": False,
+            "hand_torn_hole_as_bite": False,
+        },
+        "instance_lock": {
+            "source_product_count": 1,
+            "target_product_count": 1,
+            "count_change_event": "none",
+            "instance_ids": ["DF-01"],
+            "shape_variant_ids": ["DF-VAR-01"],
+            "shared_size_class": "DF2-7CM-MAX7.5CM",
+            "pixel_identical_clones": False,
+            "contact_deformation": "natural_support_only",
+        },
+        "surface_lock": {
+            "rice_flour_haze": True,
+            "visible_in_oblique_light": True,
+            "individually_resolvable_particles": False,
+        },
+        "filling_lock": {
+            "continuous_puree_ratio": 0.9,
+            "countable_lumps": False,
+            "holes_or_honeycomb": False,
+            "stringing": False,
+        },
+        "endpoint_lock": {
+            "terminal_state": "opening_window_seed",
+            "single_endpoint": True,
+            "max_visible_filling_area_ratio": 0.05,
+            "piece_air_gap_cm": 0,
+        },
+        "reference_roles": [role(item) for item in selected],
+    }
+
+
+def opening_shot(product: dict) -> dict:
+    state = opening_state(product)
+    asset_paths = {
+        item["id"]: item.get("target_path") or item.get("path")
+        for item in product["reference_assets"]
+    }
+    return {
+        "id": "S001",
+        "title": "首次微露馅",
+        "visual_type": "product_showcase",
+        "narrative_role": "visual_proof",
+        "purpose": "证明冰皮刚建立极小撕口的真实状态",
+        "script_segment_ids": [],
+        "scene_rationale": "沿用原片双手与场景",
+        "source_facts": ["双手持同一颗产品"],
+        "source_locks": ["人物、手、场景、机位不变"],
+        "allowed_changes": ["只替换主体食品"],
+        "source_units": [],
+        "inserted_units": [],
+        "timecode": {"start": 0.0, "end": 4.0, "duration": 4.0},
+        "scene": {"location": "原片桌边", "background": ["原片背景"], "foreground": ["双手和产品"]},
+        "character": {"present": False, "hands_only": True},
+        "emotion": {},
+        "action_beats": [],
+        "product_state": state,
+        "camera": {"shot_size": "近景", "angle": "平视", "movement": "固定", "focus": "小开口", "lens_feel": "真实手机"},
+        "lighting": {"source": "原片侧向柔光", "temperature": "warm", "notes": ["粉雾层可见"]},
+        "audio": {"delivery_mode": "silent", "script_text": "", "delivery_rationale": "纯产品证据", "voice_direction": "", "foley": ["轻微黏糯受力声"], "music": "无"},
+        "hard_constraints": ["首次微露馅后动作立即停止"],
+        "prohibited": ["大开口", "两半", "颗粒孔洞内馅"],
+        "continuity": ["同一颗约7厘米产品保持质量守恒"],
+        "asset_links": {
+            "product_references": [asset_paths["DF2-SURFACE-01"], asset_paths["DF2-OPENING-SEED-01"]],
+        },
+        "risk": {"level": "medium", "reasons": ["小开口易过冲"]},
+    }
+
+
+def assert_code(issues: list[dict], code: str) -> None:
+    assert any(issue.get("code") == code for issue in issues), (code, issues)
+
+
+def main() -> int:
+    with tempfile.TemporaryDirectory() as temporary:
+        root = Path(temporary)
+        project_dir = initialize_project(
+            "daifuku-v2-test",
+            root,
+            "durian-daifuku-v2",
+            "ugc-food-review-v1",
+            execution_tier="prompt_only",
+        )
+        product = load_json(project_dir / "library/product_bible.json")
+        knowledge = load_json(project_dir / "library/knowledge_index.json")
+        assert product["profile_id"] == "durian-daifuku-v2"
+        assert product["version"] == 5
+        assert any(entry.get("id") == "KB-DF2-BASE-001" for entry in knowledge["entries"])
+        assert any(entry.get("id") == "KB-DF2-OPENING-SEED-001" for entry in knowledge["entries"])
+        image_entries = [entry for entry in knowledge["entries"] if entry.get("type") == "image"]
+        assert image_entries and all((project_dir / entry["path"]).is_file() for entry in image_entries)
+        assert all((entry.get("applies_to") or {}).get("product_profile") == "durian-daifuku-v2" for entry in knowledge["entries"])
+
+        directive_probe = root / "directive-probe.md"
+        directive_probe.write_text(
+            "依据 video-remix-1.0.9 执行原子换头换产品。\n禁止使用 video-remix-1.0.8 的旧 Prompt。\n",
+            encoding="utf-8",
+        )
+        assert rebind_current_execution_basis(directive_probe, "video-remix-1.0.12") is True
+        directive_text = directive_probe.read_text(encoding="utf-8")
+        assert "依据 video-remix-1.0.12" in directive_text
+        assert "禁止使用 video-remix-1.0.8" in directive_text
+
+        shot = opening_shot(product)
+        issues: list[dict] = []
+        validate_durian_daifuku_v2_shot(project_dir, product, shot, issues, "shot")
+        assert not issues, issues
+
+        overshoot = copy.deepcopy(shot)
+        overshoot["product_state"]["endpoint_lock"]["max_visible_filling_area_ratio"] = 0.2
+        overshoot["product_state"]["endpoint_lock"]["piece_air_gap_cm"] = 1
+        issues = []
+        validate_durian_daifuku_v2_shot(project_dir, product, overshoot, issues, "shot")
+        assert_code(issues, "DAIFUKU_OPENING_OVERSHOOT")
+
+        powderless = copy.deepcopy(shot)
+        powderless["product_state"]["surface_lock"]["rice_flour_haze"] = False
+        issues = []
+        validate_durian_daifuku_v2_shot(project_dir, product, powderless, issues, "shot")
+        assert_code(issues, "DAIFUKU_POWDER_SURFACE_INVALID")
+
+        lumpy = copy.deepcopy(shot)
+        lumpy["product_state"]["filling_lock"]["countable_lumps"] = True
+        issues = []
+        validate_durian_daifuku_v2_shot(project_dir, product, lumpy, issues, "shot")
+        assert_code(issues, "DAIFUKU_FILLING_TEXTURE_INVALID")
+
+        square = copy.deepcopy(shot)
+        square["product_state"]["shape_lock"]["container_shape_inheritance"] = True
+        square["product_state"]["shape_lock"]["maximum_right_angle_corner_count"] = 4
+        issues = []
+        validate_durian_daifuku_v2_shot(project_dir, product, square, issues, "shot")
+        assert_code(issues, "DAIFUKU_CONTAINER_SHAPE_INHERITANCE")
+        assert_code(issues, "DAIFUKU_RIGHT_ANGLE_CORNER_INVALID")
+
+        fake_bite = copy.deepcopy(shot)
+        fake_bite["product_state"]["state"] = "bitten"
+        fake_bite["product_state"]["endpoint_lock"]["terminal_state"] = "bitten"
+        fake_bite["product_state"]["integrity_lock"].update(
+            {
+                "declared_state": "bitten",
+                "opening_origin": "hand_torn",
+                "filling_visibility": "large_open_crater",
+                "large_excavated_crater": True,
+                "single_localized_concave_notch": False,
+                "removed_mass_ratio": 0.45,
+            }
+        )
+        issues = []
+        validate_durian_daifuku_v2_shot(project_dir, product, fake_bite, issues, "shot")
+        assert_code(issues, "DAIFUKU_STATE_TOPOLOGY_INVALID")
+        assert_code(issues, "DAIFUKU_FAKE_BITE_TOPOLOGY")
+
+        outward_bite = copy.deepcopy(shot)
+        outward_bite["visual_type"] = "person_eating"
+        outward_bite["product_state"]["state"] = "bitten"
+        outward_bite["product_state"]["endpoint_lock"]["terminal_state"] = "bitten"
+        outward_bite["product_state"]["integrity_lock"].update(
+            {
+                "declared_state": "bitten",
+                "opening_origin": "teeth_contact",
+                "filling_visibility": "bite_notch_only",
+                "single_localized_concave_notch": True,
+                "tooth_compression_evidence": "咬口边缘有牙齿压迫形成的局部内凹",
+                "removed_mass_ratio": 0.24,
+                "opening_direction": "toward_camera",
+                "mouth_contacts_opening_side": False,
+                "camera_facing_opening": True,
+                "orientation_evidence": "破口正对观众，人物嘴接触完整背面",
+            }
+        )
+        issues = []
+        validate_durian_daifuku_v2_shot(project_dir, product, outward_bite, issues, "shot")
+        assert_code(issues, "DAIFUKU_BITE_ORIENTATION_INVALID")
+        inward_bite = copy.deepcopy(outward_bite)
+        inward_bite["product_state"]["integrity_lock"].update(
+            {
+                "opening_direction": "toward_mouth_and_person",
+                "mouth_contacts_opening_side": True,
+                "camera_facing_opening": False,
+                "orientation_evidence": "咬口位于人物嘴部接触侧，破口朝向人物而非镜头",
+            }
+        )
+        issues = []
+        validate_durian_daifuku_v2_shot(project_dir, product, inward_bite, issues, "shot")
+        assert not any(issue.get("code") == "DAIFUKU_BITE_ORIENTATION_INVALID" for issue in issues), issues
+
+        multi = copy.deepcopy(shot)
+        multi["product_state"]["state"] = "held"
+        multi["product_state"]["endpoint_lock"]["terminal_state"] = "held"
+        multi["product_state"]["integrity_lock"].update({"declared_state": "held", "opening_origin": "none", "filling_visibility": "none", "whole_shell_closed": True})
+        multi["product_state"]["count"] = 3
+        multi["product_state"]["instance_lock"].update(
+            {
+                "source_product_count": 3,
+                "target_product_count": 2,
+                "instance_ids": ["DF-01", "DF-02"],
+                "shape_variant_ids": ["DF-VAR-01", "DF-VAR-01"],
+                "contact_deformation": "none",
+            }
+        )
+        multi["product_state"]["arrangement_lock"] = {
+            "layout_id": "LAYOUT-HAND-01",
+            "container_id": "HAND-01",
+            "inventory_stage_id": "INV-01",
+            "instance_ids": ["DF-01", "DF-02"],
+            "relative_topology_preserved": True,
+            "event": {"type": "none"},
+        }
+        issues = []
+        validate_durian_daifuku_v2_shot(project_dir, product, multi, issues, "shot")
+        assert_code(issues, "DAIFUKU_INSTANCE_ID_COVERAGE_MISMATCH")
+        assert_code(issues, "DAIFUKU_SOURCE_COUNT_MISMATCH")
+        assert_code(issues, "DAIFUKU_MULTI_INSTANCE_CLONED")
+        assert_code(issues, "DAIFUKU_CONTACT_DEFORMATION_INVALID")
+
+        packaged = copy.deepcopy(shot)
+        packaged["product_state"]["packaging"] = "visible_open_box"
+        issues = []
+        validate_durian_daifuku_v2_shot(project_dir, product, packaged, issues, "shot")
+        assert_code(issues, "DAIFUKU_PACKAGE_CONTENT_LOCK_MISSING")
+        packaged["product_state"]["package_content_lock"] = {
+            "geometry_identity_id": "DF2-ROUND-7CM-001",
+            "container_geometry_independent": True,
+            "tray_cell_role": "support_and_occlusion_only",
+            "per_visible_instance_shape_qa": True,
+            "package_capacity_count": 4,
+            "accounted_product_count": 4,
+            "instance_ids": ["DF-PKG-01", "DF-PKG-02", "DF-PKG-03", "DF-PKG-04"],
+        }
+        packaged["product_state"]["count"] = 4
+        packaged["product_state"]["instance_lock"].update(
+            {
+                "source_product_count": 4,
+                "target_product_count": 4,
+                "instance_ids": ["DF-PKG-01", "DF-PKG-02", "DF-PKG-03", "DF-PKG-04"],
+                "shape_variant_ids": ["DF-VAR-01", "DF-VAR-02", "DF-VAR-03", "DF-VAR-04"],
+            }
+        )
+        packaged["product_state"]["arrangement_lock"] = {
+            "layout_id": "LAYOUT-PKG-01",
+            "previous_layout_id": None,
+            "container_id": "PACKAGE-01",
+            "inventory_stage_id": "INV-PKG-01",
+            "instance_ids": ["DF-PKG-01", "DF-PKG-02", "DF-PKG-03", "DF-PKG-04"],
+            "natural_irregularity_required": True,
+            "perfect_grid": False,
+            "equal_spacing": False,
+            "uniform_orientation": False,
+            "relative_topology_preserved": True,
+            "event": {"type": "initial"},
+        }
+        issues = []
+        validate_durian_daifuku_v2_shot(project_dir, product, packaged, issues, "shot")
+        assert not issues, issues
+
+        overregular = copy.deepcopy(packaged)
+        overregular["product_state"]["arrangement_lock"]["perfect_grid"] = True
+        issues = []
+        validate_durian_daifuku_v2_shot(project_dir, product, overregular, issues, "shot")
+        assert_code(issues, "DAIFUKU_OVERREGULAR_ARRANGEMENT")
+
+        after_pickup = copy.deepcopy(packaged)
+        after_pickup["id"] = "S002"
+        after_pickup["product_state"]["arrangement_lock"].update(
+            {
+                "layout_id": "LAYOUT-PKG-02",
+                "previous_layout_id": "LAYOUT-PKG-01",
+                "inventory_stage_id": "INV-PKG-02",
+                "instance_ids": ["DF-PKG-01", "DF-PKG-02", "DF-PKG-03"],
+                "event": {"type": "pick_up", "instance_id": "DF-PKG-04", "picked_instance_destination": "hand", "before_count": 4, "after_count": 3},
+            }
+        )
+        issues = []
+        validate_durian_daifuku_v2_sequence(product, [packaged, after_pickup], issues)
+        assert not issues, issues
+        bad_pickup = copy.deepcopy(after_pickup)
+        bad_pickup["product_state"]["arrangement_lock"]["instance_ids"].append("DF-PKG-04")
+        issues = []
+        validate_durian_daifuku_v2_sequence(product, [packaged, bad_pickup], issues)
+        assert_code(issues, "DAIFUKU_INVENTORY_TRANSITION_INVALID")
+
+        polluted = copy.deepcopy(shot)
+        opened = next(item for item in product["reference_assets"] if item["id"] == "DF2-OPENED-TEXTURE-01")
+        polluted["product_state"]["reference_roles"].append(role(opened))
+        polluted["asset_links"]["product_references"].append(opened.get("target_path") or opened.get("path"))
+        issues = []
+        validate_durian_daifuku_v2_shot(project_dir, product, polluted, issues, "shot")
+        assert_code(issues, "DAIFUKU_REFERENCE_STATE_POLLUTION")
+
+        legacy = copy.deepcopy(shot)
+        legacy["hard_constraints"].append("形成2至4条、3至6厘米连接带")
+        issues = []
+        validate_durian_daifuku_v2_shot(project_dir, product, legacy, issues, "shot")
+        assert_code(issues, "DAIFUKU_LEGACY_CONTRACT_CONFLICT")
+
+        project = load_json(project_dir / "project.json")
+        bundle = {
+            "project": project,
+            "product": product,
+            "style": load_json(project_dir / "library/style_bible.json"),
+            "story": {"break_plan": {"occurrences": []}},
+            "corrections": {"rules": []},
+            "knowledge": knowledge,
+        }
+        markdown, metadata = compile_shot(bundle, shot)
+        assert metadata["product_profile"] == "durian-daifuku-v2"
+        for token in ("约7厘米", "细糯米粉雾层", "连续果泥", "opening_window_seed", "到达终点后立即停止", "禁止顶部剥开", "原片手持两颗或三颗", "咬口必须朝向嘴部和人物大方向"):
+            assert token in markdown, token
+        for obsolete in ("沙沙颗粒感", "2至4条短而宽", "3至6厘米短距离连接"):
+            assert obsolete not in markdown, obsolete
+        packaged_markdown, _ = compile_shot(bundle, packaged)
+        for token in ("DF2-ROUND-7CM-001", "包装盒和方格内托可以方", "逐颗检查", "不能只拿一颗代表整盒"):
+            assert token in packaged_markdown, token
+
+        legacy_dir = initialize_project(
+            "daifuku-v1-test",
+            root,
+            "durian-daifuku-v1",
+            "ugc-food-review-v1",
+            execution_tier="prompt_only",
+        )
+        legacy_shots = load_json(legacy_dir / "shots/shot_manifest.json")
+        legacy_shots["shots"] = [{"id": "S001", "product_state": {"profile": "durian-daifuku-v1", "state": "stretched"}, "asset_links": {"product_references": []}}]
+        write_json(legacy_dir / "shots/shot_manifest.json", legacy_shots)
+        (legacy_dir / "prompts" / "S001.md").write_text("legacy prompt\n", encoding="utf-8")
+        migrated = migrate(legacy_dir, root / "migrated-v2")
+        assert load_json(legacy_dir / "project.json")["product_profile"] == "durian-daifuku-v1"
+        assert load_json(migrated / "project.json")["product_profile"] == "durian-daifuku-v2"
+        migrated_state = load_json(migrated / "shots/shot_manifest.json")["shots"][0]["product_state"]
+        assert migrated_state["state"] == "migration_required"
+        assert migrated_state["shape_lock"]["geometry_identity_id"] == "DF2-ROUND-7CM-001"
+        assert not (migrated / "legacy-release-artifacts").exists()
+        assert not list((migrated / "prompts").glob("*.md"))
+        assert not active_legacy_contamination(migrated, "video-remix-1.0.12")
+
+        legacy_v2_dir = initialize_project(
+            "daifuku-v2-release-test",
+            root,
+            "durian-daifuku-v2",
+            "ugc-food-review-v1",
+            execution_tier="first_frame_only",
+        )
+        legacy_v2_project = load_json(legacy_v2_dir / "project.json")
+        legacy_v2_project["skill_release_lock"]["bundle_release_id"] = "video-remix-1.0.6"
+        write_json(legacy_v2_dir / "project.json", legacy_v2_project)
+        directives = legacy_v2_dir / "planning" / "user_directives.md"
+        directives.write_text("依据 video-remix-1.0.9 同轮原子替换身份与产品。\n", encoding="utf-8")
+        legacy_v2_manifest = load_json(legacy_v2_dir / "shots" / "shot_manifest.json")
+        old_shot = opening_shot(load_json(legacy_v2_dir / "library" / "product_bible.json"))
+        old_shot["asset_links"]["approved_generation_first_frame"] = "review/approved/old.png"
+        unresolved_shot = opening_shot(load_json(legacy_v2_dir / "library" / "product_bible.json"))
+        unresolved_shot["id"] = "S002"
+        unresolved_shot["product_state"]["state"] = "migration_required"
+        unresolved_shot["product_state"]["legacy_state"] = "stretched"
+        legacy_v2_manifest["shots"] = [old_shot, unresolved_shot]
+        write_json(legacy_v2_dir / "shots" / "shot_manifest.json", legacy_v2_manifest)
+        (legacy_v2_dir / "prompts" / "S001.md").write_text("old prompt\n", encoding="utf-8")
+        old_candidate = legacy_v2_dir / "review" / "candidates" / "old.png"
+        old_candidate.parent.mkdir(parents=True, exist_ok=True)
+        old_candidate.write_bytes(b"old candidate")
+        nonstandard_candidate = legacy_v2_dir / "first_frames" / "candidates" / "old.png"
+        nonstandard_candidate.parent.mkdir(parents=True, exist_ok=True)
+        nonstandard_candidate.write_bytes(b"old first-frame candidate")
+        asset_candidate = legacy_v2_dir / "assets" / "candidates" / "old.png"
+        asset_candidate.parent.mkdir(parents=True, exist_ok=True)
+        asset_candidate.write_bytes(b"old asset candidate")
+        write_json(
+            legacy_v2_dir / "planning" / "source_intake_contract.json",
+            {
+                "target_product_profile": "durian-daifuku-v1",
+                "skill_release": "video-remix-1.0.5",
+            },
+        )
+        write_json(
+            legacy_v2_dir / "planning" / "product_continuity_lock.json",
+            {"profile": "durian-daifuku-v1", "candidate": "first_frames/candidates/old.png"},
+        )
+        write_json(
+            legacy_v2_dir / "review" / "first_frame_batch_qa.json",
+            {"project_product_profile_found": "durian-daifuku-v1"},
+        )
+        write_json(
+            legacy_v2_dir / "review" / "candidate_hard_audit_20260825.json",
+            {"skill_release": "video-remix-1.0.5"},
+        )
+        nested_legacy = legacy_v2_dir / "legacy-release-artifacts" / "old" / "prompts"
+        nested_legacy.mkdir(parents=True, exist_ok=True)
+        (nested_legacy / "S001.md").write_text("durian-daifuku-v1", encoding="utf-8")
+        migrated_v2 = migrate(legacy_v2_dir, root / "migrated-v2-release")
+        assert load_json(legacy_v2_dir / "project.json")["skill_release_lock"]["bundle_release_id"] == "video-remix-1.0.6"
+        migrated_v2_project = load_json(migrated_v2 / "project.json")
+        assert migrated_v2_project["skill_release_lock"]["bundle_release_id"] == "video-remix-1.0.12"
+        assert migrated_v2_project["migration_requirements"]["requires_manual_shot_map_rebuild"] is True
+        assert migrated_v2_project["migration_requirements"]["ambiguous_legacy_states"] == [{"shot_id": "S002", "legacy_state": "stretched"}]
+        migrated_v2_shot = load_json(migrated_v2 / "shots" / "shot_manifest.json")["shots"][0]
+        assert migrated_v2_shot["product_state"]["shape_lock"]["container_shape_inheritance"] is False
+        assert migrated_v2_shot["asset_links"]["approved_generation_first_frame"] is None
+        assert not (migrated_v2 / "review" / "candidates").exists()
+        assert not (migrated_v2 / "first_frames" / "candidates").exists()
+        assert not (migrated_v2 / "assets" / "candidates").exists()
+        assert not (migrated_v2 / "planning" / "product_continuity_lock.json").exists()
+        assert not (migrated_v2 / "review" / "first_frame_batch_qa.json").exists()
+        assert not (migrated_v2 / "review" / "candidate_hard_audit_20260825.json").exists()
+        assert not (migrated_v2 / "legacy-release-artifacts").exists()
+        intake = load_json(migrated_v2 / "planning" / "source_intake_contract.json")
+        assert intake["target_product_profile"] == "durian-daifuku-v2"
+        assert intake["skill_release"] == "video-remix-1.0.12"
+        cleanup = load_json(migrated_v2 / "review" / "migration_cleanup_receipt.json")
+        assert cleanup["current_execution_basis_rebound_paths"] == ["planning/user_directives.md"]
+        assert "依据 video-remix-1.0.12" in (migrated_v2 / "planning" / "user_directives.md").read_text(encoding="utf-8")
+        assert cleanup["active_prompts_cleared"] is True
+        assert cleanup["active_asset_reuse_plan_reset"] is True
+        assert cleanup["active_recursive_legacy_scan"] == "passed"
+        reuse = load_json(migrated_v2 / "planning" / "asset_reuse_plan.json")
+        assert reuse["contract_binding"]["bundle_release_id"] == "video-remix-1.0.12"
+        assert not active_legacy_contamination(migrated_v2, "video-remix-1.0.12")
+        bypass = migrated_v2 / "review" / "unrecognized_old_approval.md"
+        bypass.write_text("video-remix-1.0.5 durian-daifuku-v1", encoding="utf-8")
+        findings = active_legacy_contamination(migrated_v2, "video-remix-1.0.12")
+        assert any("unrecognized_old_approval.md" in finding for finding in findings), findings
+        bypass.unlink()
+
+    print(json.dumps({"status": "ok", "contract": "durian-daifuku-v2"}, ensure_ascii=False))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

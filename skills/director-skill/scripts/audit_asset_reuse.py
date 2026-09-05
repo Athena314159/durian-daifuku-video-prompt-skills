@@ -44,6 +44,7 @@ DIRECT_DELIVERY_TYPES = {
     "word_extracted_frame",
     "generated_result",
 }
+NO_GENERATION_MODE = "no_generation_prompt_docx_alignment"
 
 
 def sha256(path: Path) -> str:
@@ -57,6 +58,76 @@ def sha256(path: Path) -> str:
 def resolve_path(raw: str, project_root: Path) -> Path:
     path = Path(raw).expanduser()
     return path if path.is_absolute() else project_root / path
+
+
+def audit_no_generation_plan(plan: dict[str, Any], project: dict[str, Any], project_root: Path, stage: str) -> int:
+    """Audit formal no-generation references without inventing gallery approval."""
+    errors: list[str] = []
+    binding = plan.get("contract_binding") if isinstance(plan.get("contract_binding"), dict) else {}
+    lock = project.get("skill_release_lock") if isinstance(project.get("skill_release_lock"), dict) else {}
+    expected_binding = {"bundle_release_id": lock.get("bundle_release_id"), "prompt_authoring_contract": lock.get("prompt_authoring_contract"), "product_profile": project.get("product_profile")}
+    if any(binding.get(key) != value for key, value in expected_binding.items()):
+        errors.append("no-generation asset_reuse_plan.contract_binding 与当前项目不一致")
+    contract_path = project_root / "planning" / "no_generation_prompt_docx_alignment_contract.json"
+    try:
+        contract = json.loads(contract_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        contract = {}
+        errors.append("缺少或无法解析 no-generation DOCX 合同")
+    if contract.get("schema_version") != "no-generation-prompt-docx-alignment-v1.0":
+        errors.append("no-generation DOCX 合同 schema 不匹配")
+    if contract.get("approved_target_frame_count") != 0:
+        errors.append("no-generation 合同批准目标帧数量必须为0")
+    refs = contract.get("references") if isinstance(contract.get("references"), list) else []
+    inventory = plan.get("inventory") if isinstance(plan.get("inventory"), list) else []
+    decisions = plan.get("shot_decisions") if isinstance(plan.get("shot_decisions"), list) else []
+    expected_owners = [str(item.get("owner_unit_id")) for item in refs if isinstance(item, dict)]
+    actual_owners = [str(item.get("owner_unit_id")) for item in inventory if isinstance(item, dict)]
+    if actual_owners != expected_owners:
+        errors.append("no-generation inventory owner 顺序必须与合同参考顺序一致")
+    allowed_roles = {"legacy_composition_reference", "legacy_rejected_example", "exact_source_reuse"}
+    for index, item in enumerate(inventory):
+        if not isinstance(item, dict):
+            errors.append(f"no-generation inventory[{index}] 必须为对象")
+            continue
+        owner = item.get("owner_unit_id") or f"inventory[{index}]"
+        if item.get("asset_role") not in allowed_roles:
+            errors.append(f"{owner} asset_role 不属于 no-generation 允许角色")
+        if item.get("approval_status") != "audit_only" or item.get("approved") is not False:
+            errors.append(f"{owner} 必须保持 audit_only 且 approved=false")
+        raw_path = item.get("path")
+        path = resolve_path(raw_path, project_root) if isinstance(raw_path, str) else None
+        if path is None or not path.is_file():
+            errors.append(f"{owner} 参考文件不可访问")
+            continue
+        actual = sha256(path)
+        if item.get("sha256") != actual:
+            errors.append(f"{owner} SHA-256 与文件不一致")
+        try:
+            with Image.open(path) as image:
+                width, height = image.size
+            if width * 16 != height * 9:
+                errors.append(f"{owner} 不是独立9:16图")
+        except Exception as exc:
+            errors.append(f"{owner} 不是可读图片：{exc}")
+    for decision in decisions:
+        if not isinstance(decision, dict):
+            errors.append("no-generation shot_decision 必须为对象")
+            continue
+        if decision.get("decision") != "omit" or decision.get("selected_asset_ids"):
+            errors.append(f"{decision.get('shot_id')} no-generation 必须 omit 且 selected_asset_ids 为空")
+    summary = plan.get("summary") if isinstance(plan.get("summary"), dict) else {}
+    if summary.get("expected_word_image_count") != len(refs):
+        errors.append("no-generation expected_word_image_count 必须等于合同 reference_count")
+    if summary.get("approved_target_frame_count") != 0:
+        errors.append("no-generation summary.approved_target_frame_count 必须为0")
+    if errors:
+        print(f"资产复用审核阻断：{len(errors)}项")
+        for item in errors:
+            print(f"- {item}")
+        return 1
+    print(f"no-generation 资产复用审核通过：{len(refs)}张合同参考图，0张批准目标帧；stage={stage}，不要求 gallery user approval。")
+    return 0
 
 
 def main() -> int:
@@ -84,6 +155,23 @@ def main() -> int:
     errors: list[str] = []
     warnings: list[str] = []
     project_root = plan_path.parent.parent
+    project_path = project_root / "project.json"
+    if not project_path.is_file():
+        errors.append("缺少 project.json，无法验证版本与产品来源")
+        project: dict[str, Any] = {}
+    else:
+        project = json.loads(project_path.read_text(encoding="utf-8"))
+    if project.get("document_delivery_mode") == NO_GENERATION_MODE:
+        return audit_no_generation_plan(plan, project, project_root, args.stage)
+    release_lock = project.get("skill_release_lock") if isinstance(project.get("skill_release_lock"), dict) else {}
+    binding = plan.get("contract_binding") if isinstance(plan.get("contract_binding"), dict) else {}
+    expected_binding = {
+        "bundle_release_id": release_lock.get("bundle_release_id"),
+        "prompt_authoring_contract": release_lock.get("prompt_authoring_contract"),
+        "product_profile": project.get("product_profile"),
+    }
+    if any(binding.get(key) != value for key, value in expected_binding.items()):
+        errors.append("asset_reuse_plan.contract_binding 与当前项目版本/产品合同不一致；旧资产计划必须重建")
     inventory = plan.get("inventory")
     decisions = plan.get("shot_decisions")
     summary = plan.get("summary")
@@ -169,6 +257,12 @@ def main() -> int:
         if required_avatars and required_products:
             if not decision.get("cross_layer_pixel_protection"):
                 errors.append(f"{shot_id} 同时换脸和换产品但缺少 cross_layer_pixel_protection")
+            if decision.get("atomic_identity_product_required") is not True:
+                errors.append(f"{shot_id} 同时换脸和换产品必须设置 atomic_identity_product_required=true")
+            if decision.get("retry_origin_policy") != "exact_original_source_only":
+                errors.append(f"{shot_id} 重试必须返回精确原始 source_first_frame")
+            if decision.get("partial_candidate_policy") != "diagnostic_only_never_reuse":
+                errors.append(f"{shot_id} 半成品候选必须仅诊断且禁止复用")
 
         if mode == "reuse":
             if not candidate_ids or not selected_ids:
@@ -196,10 +290,15 @@ def main() -> int:
 
     selected_hashes: dict[str, tuple[str, str]] = {}
     for shot_id, asset_id, asset in selected_records:
+        if asset.get("origin_bundle_release_id") != release_lock.get("bundle_release_id"):
+            errors.append(f"{shot_id}/{asset_id} 来源 release 与当前项目不一致；旧版本批准图不得直接复用")
+        if asset.get("product_ids") and asset.get("origin_product_profile") != project.get("product_profile"):
+            errors.append(f"{shot_id}/{asset_id} 来源产品合同与当前项目不一致")
         if asset.get("asset_type") not in DIRECT_DELIVERY_TYPES:
             errors.append(f"{shot_id}/{asset_id} 是参考或候选资产，未提升为可交付批准帧")
-        if asset.get("approval_status") != "approved":
-            errors.append(f"{shot_id}/{asset_id} 未批准")
+        allowed_approvals = {"user_approved"} if args.stage == "pre-word" else {"approved", "user_approved"}
+        if asset.get("approval_status") not in allowed_approvals:
+            errors.append(f"{shot_id}/{asset_id} approval_status 必须属于 {sorted(allowed_approvals)}")
         if asset.get("rights_status") not in {"cleared", "not_applicable"}:
             errors.append(f"{shot_id}/{asset_id} 权利状态未清")
         if asset.get("has_source_subtitles") is not False:
@@ -232,13 +331,22 @@ def main() -> int:
             errors.append(f"{shot_id}/{asset_id} SHA-256 与文件不一致")
         if actual_hash in selected_hashes:
             previous_shot, previous_asset = selected_hashes[actual_hash]
-            if not asset.get("allow_duplicate_delivery", False):
-                errors.append(
-                    f"{shot_id}/{asset_id} 与 {previous_shot}/{previous_asset} 内容重复；"
-                    "禁止同图冒充多帧，必要时显式记录 allow_duplicate_delivery 与理由"
-                )
+            errors.append(
+                f"{shot_id}/{asset_id} 与 {previous_shot}/{previous_asset} 内容重复；"
+                "最终 Word 的每个 SRC/ADD 必须使用内容唯一的批准图，不接受重复图豁免"
+            )
         else:
             selected_hashes[actual_hash] = (shot_id, asset_id)
+
+        if args.stage == "pre-word":
+            user_approval = asset.get("user_approval") if isinstance(asset.get("user_approval"), dict) else {}
+            if user_approval.get("status") != "user_approved":
+                errors.append(f"{shot_id}/{asset_id} 缺少用户批准状态")
+            if user_approval.get("asset_sha256") != actual_hash:
+                errors.append(f"{shot_id}/{asset_id} 用户批准回执未绑定当前图片 SHA-256")
+            for field in ("display_receipt_id", "approved_at"):
+                if not isinstance(user_approval.get(field), str) or not user_approval[field].strip():
+                    errors.append(f"{shot_id}/{asset_id} user_approval.{field} 缺失")
 
     expected_word_count = len(selected_records)
     if summary.get("reused_frame_count") != reused_count:
@@ -247,6 +355,19 @@ def main() -> int:
         errors.append("summary.new_generation_count 与逐镜补生计划不一致")
     if args.stage == "pre-word" and summary.get("expected_word_image_count") != expected_word_count:
         errors.append("summary.expected_word_image_count 与逐镜实际选中图片数不一致")
+    if args.stage == "pre-word":
+        receipt = plan.get("gallery_receipt") if isinstance(plan.get("gallery_receipt"), dict) else {}
+        if receipt.get("status") != "user_approved":
+            errors.append("进入 Word 前 gallery_receipt.status 必须为 user_approved")
+        for field in ("display_receipt_id", "displayed_at", "approved_at"):
+            if not isinstance(receipt.get(field), str) or not receipt[field].strip():
+                errors.append(f"进入 Word 前 gallery_receipt.{field} 缺失")
+        expected_refs = [
+            {"shot_id": shot_id, "asset_id": asset_id, "sha256": asset.get("sha256")}
+            for shot_id, asset_id, asset in selected_records
+        ]
+        if receipt.get("asset_refs") != expected_refs:
+            errors.append("gallery_receipt.asset_refs 必须按 Word 图片顺序精确绑定全部 asset_id 与 SHA-256")
     if not plan.get("scope", {}).get("historical_packages"):
         warnings.append("scope.historical_packages 为空；请确认已搜索用户点名的历史交付")
 

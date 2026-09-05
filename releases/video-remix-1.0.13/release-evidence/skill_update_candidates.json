@@ -1,0 +1,42 @@
+{
+  "schema_version": "2.0",
+  "project_id": "20260825-8-25-r2",
+  "candidates": [
+    {
+      "candidate_id": "SUC-DAIFUKU-PACKAGING-BINDING-001",
+      "status": "approved",
+      "user_approved": true,
+      "proposed_rule": "榴莲大福镜头出现独立袋、零售外盒或运输纸箱时，必须从统一产品 profile 自动种入对应批准资产，并按包装层级与可见面逐镜绑定匹配母版；任意大福本体参考不得替代包装母版，缺失时生图前失败关闭。",
+      "observable_problem": "多个活动对话仍运行旧项目或只携带文字包装规则；包装知识条目批准字段不统一，生图门只验证存在任意产品参考，导致独立包装和外盒没有真实母版时仍被模型凭空设计。",
+      "evidence": [
+        "8.24 榴莲大福图 Agent 当前项目仍锁定 video-remix-1.0.3，奶疙瘩总控当前项目仍锁定 video-remix-1.0.9",
+        "durian-daifuku-v2 profile 的 reference_assets 只有大福本体五类资产，没有独立袋、零售外盒或运输纸箱",
+        "image_generation_gate.py 只要求 product_references 非空，不验证包装层级、可见面、批准 ID 与 SHA",
+        "部分项目知识条目使用 status=approved_master/approved_for_current_project，但 applicable_knowledge 只接受 approved=true",
+        "现有 1.0.12 迁移副本仍有 manual_cross_shot_rebind_required 且包装镜缺母版绑定"
+      ],
+      "scope": "cross_project",
+      "risk_level": "high",
+      "replaces": [
+        "packaging shots may satisfy generation authorization with any generic product reference",
+        "project-local status strings may substitute for the canonical approved boolean",
+        "creating a migrated copy without explicitly rebinding the active task is treated as synchronization"
+      ],
+      "interaction_surfaces": [
+        "product profile asset seeding",
+        "knowledge matching",
+        "shot-level packaging reference roles",
+        "image generation authorization",
+        "migration and active-task handoff",
+        "release regression gate"
+      ],
+      "regression_case_ids": [
+        "GOLDEN-DAIFUKU-PACKAGING-ASSET-SEED-001",
+        "GOLDEN-DAIFUKU-PACKAGING-REFERENCE-BINDING-001",
+        "GOLDEN-DAIFUKU-PACKAGING-APPROVAL-SCHEMA-001",
+        "GOLDEN-ACTIVE-TASK-EXPLICIT-MIGRATION-001"
+      ],
+      "rollback_trigger": "包装资产错误污染纯产品镜、独立袋与零售外盒层级混淆、批准母版 SHA 不一致、旧黄金案例回退，或新版本仍允许包装镜在缺少匹配母版时获得生图授权。"
+    }
+  ]
+}

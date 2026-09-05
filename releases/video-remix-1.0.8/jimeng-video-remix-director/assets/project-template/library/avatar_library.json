@@ -1,0 +1,95 @@
+{
+  "schema_version": "1.1",
+  "version": 2,
+  "avatars": [
+    {
+      "id": "AV-001",
+      "name": "人物1",
+      "active": true,
+      "portrait_rights_cleared": true,
+      "authorization_basis": "用户直接提供5张参考图并明确要求写入Skill知识库用于换脸",
+      "usage_scope": "user_skill_library",
+      "identity_traits": [
+        "成年东亚女性",
+        "偏椭圆小脸与圆润收窄下颌",
+        "大而圆的深色眼睛与自然双眼皮",
+        "平直略弧深色眉",
+        "窄鼻梁与小巧圆润鼻头",
+        "自然粉红唇与整齐上排牙齿",
+        "深棕近黑色顺直及肩发，偏中分斜刘海",
+        "清透自然妆感与暖中性肤色"
+      ],
+      "forbidden_changes": [
+        "不得改变人物1的脸型、眼型、鼻型、眉形、年龄和肤色",
+        "不得改成尖锐锥子脸、夸张欧式双眼皮或高耸鼻梁",
+        "不得改变深色及肩直发与斜分结构",
+        "不得继承参考图背景、旧食品、字幕、水印或平台UI"
+      ],
+      "reference_assets": {
+        "front": "assets/avatars/person-1/person1_front_smile_identity.png",
+        "front_speaking": "assets/avatars/person-1/person1_front_speaking_identity.png",
+        "front_product_expression": "assets/avatars/person-1/person1_front_product_expression_identity.png",
+        "left_45": "assets/avatars/person-1/person1_left_45_downward_identity.png",
+        "right_45": null,
+        "profile": null,
+        "upper_body": null,
+        "expressions": [
+          "assets/avatars/person-1/person1_front_speaking_identity.png",
+          "assets/avatars/person-1/person1_front_smile_identity.png",
+          "assets/avatars/person-1/person1_front_product_expression_identity.png"
+        ]
+      },
+      "reference_limitations": [
+        "缺少严格右45度和90度侧脸参考",
+        "激活资产均为从用户原图确定性裁切的带透明通道身份图，只提供五官、脸型、发型和表情",
+        "目标背景、家具、服装、身体、手势、机位和光线只能来自同编号原视频首帧；若继承人物参考背景则触发AVATAR_BACKGROUND_LEAKAGE",
+        "旧全景或生成式透明人物图不得作为唯一换脸身份源"
+      ]
+    },
+    {
+      "id": "AV-002",
+      "name": "男性1",
+      "active": true,
+      "portrait_rights_cleared": true,
+      "authorization_basis": "用户直接提供三视图并明确要求写入Skill知识库用于换头",
+      "usage_scope": "user_skill_library",
+      "identity_traits": [
+        "成年东亚男性",
+        "圆润偏方的脸型与自然下颌线",
+        "短发发际线、深色眉眼、中等鼻梁和自然唇形",
+        "身份参考包含正面、左侧面和背面全身视图"
+      ],
+      "forbidden_changes": [
+        "不得改变男性1的脸型、五官比例、年龄呈现和肤色",
+        "不得继承参考图的黑色无袖服装、黑裤、鞋、白底或站姿",
+        "发型与发色存在项目覆盖时不得继承参考图纯黑发色",
+        "不得改变同框其他人物、眼镜、身体、手势、产品、包装、盘子、场景、构图和光线"
+      ],
+      "reference_assets": {
+        "turnaround": "assets/avatars/male-1/male1_turnaround.png",
+        "front": "assets/avatars/male-1/male1_turnaround.png",
+        "profile": "assets/avatars/male-1/male1_turnaround.png",
+        "back": "assets/avatars/male-1/male1_turnaround.png"
+      },
+      "project_override_policy": {
+        "identity_from_avatar": ["face_shape", "facial_features", "hairline", "head_structure"],
+        "hair_from_source_frame_when_requested": ["shape", "length", "color", "roots", "highlights"],
+        "reject_code": "AVATAR_HAIR_OVERRIDE_MISMATCH"
+      },
+      "reference_limitations": [
+        "当前参考为同一张正面、侧面、背面拼接三视图，缺少独立右45度、左45度和表情参考",
+        "参考图只承担身份，不承担服装、身体姿势、环境、光线或项目发色"
+      ]
+    }
+  ],
+  "selection_policy": {
+    "require_portrait_rights": true,
+    "match_source_age_presentation": true,
+    "match_source_pose_and_lighting": true,
+    "do_not_change_identity_without_explicit_selection": true,
+    "avatar_reference_is_identity_only": true,
+    "source_frame_is_sole_scene_authority": true,
+    "reject_code_for_background_leakage": "AVATAR_BACKGROUND_LEAKAGE",
+    "reject_code_for_identity_mismatch": "AVATAR_IDENTITY_MISMATCH"
+  }
+}

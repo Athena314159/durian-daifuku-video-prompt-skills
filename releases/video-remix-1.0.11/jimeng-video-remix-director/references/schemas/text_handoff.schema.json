@@ -1,0 +1,269 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.codex/jimeng/text_handoff.schema.json",
+  "title": "Jimeng full-delivery text branch handoff v2.0",
+  "type": "object",
+  "required": [
+    "schema_version", "execution_tier", "branch_role", "locked_semantic_hash", "shot_map_sha256",
+    "status", "collections", "completed_shot_ids", "completed_source_shot_ids",
+    "completed_inserted_shot_ids", "blocked_items", "artifacts", "source_duration_seconds",
+    "source_units", "inserted_units", "generation_shot_map", "eating_plan", "break_plan"
+  ],
+  "properties": {
+    "schema_version": {"const": "text-handoff-v2.0"},
+    "execution_tier": {"const": "full_delivery"},
+    "branch_role": {"const": "text"},
+    "locked_semantic_hash": {"$ref": "#/$defs/sha256"},
+    "shot_map_sha256": {"$ref": "#/$defs/sha256"},
+    "status": {"enum": ["complete", "partial", "blocked"]},
+    "collections": {"$ref": "#/$defs/collections"},
+    "completed_shot_ids": {"$ref": "#/$defs/shotIds"},
+    "completed_source_shot_ids": {"$ref": "#/$defs/sourceIds"},
+    "completed_inserted_shot_ids": {"$ref": "#/$defs/insertedIds"},
+    "blocked_items": {"type": "array"},
+    "artifacts": {"type": "array"},
+    "source_duration_seconds": {"type": "number", "exclusiveMinimum": 0},
+    "source_units": {"type": "array", "items": {"$ref": "#/$defs/sourceUnit"}, "minItems": 1},
+    "inserted_units": {"type": "array", "items": {"$ref": "#/$defs/insertedUnit"}},
+    "generation_shot_map": {"type": "array", "items": {"$ref": "#/$defs/generationShot"}, "minItems": 1},
+    "eating_plan": {"$ref": "#/$defs/eatingPlan"},
+    "break_plan": {"$ref": "#/$defs/breakPlan"}
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "timecode": {
+      "type": "object",
+      "required": ["start", "end", "duration"],
+      "properties": {
+        "start": {"type": "number", "minimum": 0},
+        "end": {"type": "number", "exclusiveMinimum": 0},
+        "duration": {"type": "number", "exclusiveMinimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "shotIds": {"type": "array", "items": {"type": "string", "pattern": "^S[0-9]+$"}, "uniqueItems": true, "minItems": 1},
+    "sourceIds": {"type": "array", "items": {"type": "string", "pattern": "^SRC[0-9]+$"}, "uniqueItems": true, "minItems": 1},
+    "sourceIdsMaybeEmpty": {"type": "array", "items": {"type": "string", "pattern": "^SRC[0-9]+$"}, "uniqueItems": true},
+    "insertedIds": {"type": "array", "items": {"type": "string", "pattern": "^ADD[0-9]+$"}, "uniqueItems": true},
+    "unitIds": {"type": "array", "items": {"type": "string", "pattern": "^(SRC|ADD)[0-9]+$"}, "uniqueItems": true, "minItems": 1},
+    "collections": {
+      "type": "object",
+      "required": ["shot_ids", "source_shot_ids", "inserted_shot_ids", "unit_ids"],
+      "properties": {
+        "shot_ids": {"$ref": "#/$defs/shotIds"},
+        "source_shot_ids": {"$ref": "#/$defs/sourceIds"},
+        "inserted_shot_ids": {"$ref": "#/$defs/insertedIds"},
+        "unit_ids": {"$ref": "#/$defs/unitIds"}
+      },
+      "additionalProperties": false
+    },
+    "performanceLayer": {
+      "type": "object",
+      "required": ["status", "source_timecode", "source_reference_frame", "observable_evidence", "confidence", "gap_reason"],
+      "properties": {
+        "status": {"enum": ["observed", "audible", "not_visible", "not_applicable", "template_supplement"]},
+        "source_timecode": {"anyOf": [{"$ref": "#/$defs/timecode"}, {"type": "null"}]},
+        "source_reference_frame": {"type": ["string", "null"]},
+        "observable_evidence": {"type": "string", "minLength": 1},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "gap_reason": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "performanceLayers": {
+      "type": "object",
+      "required": ["emotion_trigger", "gaze", "facial_microreaction", "body_hand_preparation", "breath_pause", "voice_speech"],
+      "properties": {
+        "emotion_trigger": {"$ref": "#/$defs/performanceLayer"},
+        "gaze": {"$ref": "#/$defs/performanceLayer"},
+        "facial_microreaction": {"$ref": "#/$defs/performanceLayer"},
+        "body_hand_preparation": {"$ref": "#/$defs/performanceLayer"},
+        "breath_pause": {"$ref": "#/$defs/performanceLayer"},
+        "voice_speech": {"$ref": "#/$defs/performanceLayer"}
+      },
+      "additionalProperties": false
+    },
+    "masterAsset": {
+      "type": "object",
+      "required": ["asset_id", "path", "sha256"],
+      "properties": {
+        "asset_id": {"type": "string", "minLength": 1},
+        "path": {"type": "string", "pattern": "^/", "minLength": 2},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "additionalProperties": false
+    },
+    "visibleFace": {
+      "type": "object",
+      "required": ["box_id", "face", "visibility_state", "master_asset", "visible_regions", "observable_evidence", "qa_status"],
+      "properties": {
+        "box_id": {"type": "string", "minLength": 1},
+        "face": {"enum": ["front", "side", "top"]},
+        "visibility_state": {"enum": ["fully_visible", "partially_visible", "occluded", "off_frame_partial"]},
+        "master_asset": {"$ref": "#/$defs/masterAsset"},
+        "visible_regions": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1, "uniqueItems": true},
+        "observable_evidence": {"type": "string", "minLength": 1},
+        "qa_status": {"const": "approved"}
+      },
+      "additionalProperties": false
+    },
+    "packagingEvidence": {
+      "type": "object",
+      "required": ["visible", "visible_faces"],
+      "properties": {
+        "visible": {"type": "boolean"},
+        "visible_faces": {"type": "array", "items": {"$ref": "#/$defs/visibleFace"}}
+      },
+      "allOf": [
+        {"if": {"properties": {"visible": {"const": true}}}, "then": {"properties": {"visible_faces": {"minItems": 1}}}},
+        {"if": {"properties": {"visible": {"const": false}}}, "then": {"properties": {"visible_faces": {"maxItems": 0}}}}
+      ],
+      "additionalProperties": false
+    },
+    "sourceUnit": {
+      "type": "object",
+      "required": ["shot_id", "source_shot_id", "source_timecode", "generation_timecode", "storyboard_description", "script_text", "source_performance_layers", "packaging_evidence"],
+      "properties": {
+        "shot_id": {"type": "string", "pattern": "^S[0-9]+$"},
+        "source_shot_id": {"type": "string", "pattern": "^SRC[0-9]+$"},
+        "source_timecode": {"$ref": "#/$defs/timecode"},
+        "generation_timecode": {"$ref": "#/$defs/timecode"},
+        "storyboard_description": {"type": "string", "minLength": 1},
+        "script_text": {"type": "string", "minLength": 1},
+        "source_performance_layers": {"$ref": "#/$defs/performanceLayers"},
+        "packaging_evidence": {"$ref": "#/$defs/packagingEvidence"}
+      },
+      "additionalProperties": false
+    },
+    "insertedUnit": {
+      "type": "object",
+      "required": ["shot_id", "inserted_shot_id", "generation_timecode", "storyboard_description", "script_text", "insertion_rationale", "rhythm_anchor", "source_reference_shot_ids", "source_reference_frame", "source_performance_layers", "packaging_evidence"],
+      "properties": {
+        "shot_id": {"type": "string", "pattern": "^S[0-9]+$"},
+        "inserted_shot_id": {"type": "string", "pattern": "^ADD[0-9]+$"},
+        "generation_timecode": {"$ref": "#/$defs/timecode"},
+        "storyboard_description": {"type": "string", "minLength": 1},
+        "script_text": {"type": "string", "minLength": 1},
+        "insertion_rationale": {"type": "string", "minLength": 1},
+        "rhythm_anchor": {"type": "string", "minLength": 1},
+        "source_reference_shot_ids": {"$ref": "#/$defs/sourceIds"},
+        "source_reference_frame": {"type": "string", "minLength": 1},
+        "source_performance_layers": {"$ref": "#/$defs/performanceLayers"},
+        "packaging_evidence": {"$ref": "#/$defs/packagingEvidence"}
+      },
+      "additionalProperties": false
+    },
+    "generationShot": {
+      "type": "object",
+      "required": ["shot_id", "generation_timecode", "unit_ids", "source_shot_ids", "inserted_shot_ids"],
+      "properties": {
+        "shot_id": {"type": "string", "pattern": "^S[0-9]+$"},
+        "generation_timecode": {"$ref": "#/$defs/timecode"},
+        "unit_ids": {"$ref": "#/$defs/unitIds"},
+        "source_shot_ids": {"$ref": "#/$defs/sourceIdsMaybeEmpty"},
+        "inserted_shot_ids": {"$ref": "#/$defs/insertedIds"}
+      },
+      "additionalProperties": false
+    },
+    "eatingOccurrence": {
+      "type": "object",
+      "required": ["id", "event_group_id", "shot_id", "unit_id", "origin", "generation_timecode", "timeline_timecode", "rhythm_anchor", "script_anchor", "required_phases", "non_contiguous_event"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "event_group_id": {"type": "string", "minLength": 1},
+        "shot_id": {"type": "string", "pattern": "^S[0-9]+$"},
+        "unit_id": {"type": "string", "pattern": "^(SRC|ADD)[0-9]+$"},
+        "origin": {"enum": ["source", "inserted"]},
+        "source_shot_id": {"type": "string", "pattern": "^SRC[0-9]+$"},
+        "inserted_shot_id": {"type": "string", "pattern": "^ADD[0-9]+$"},
+        "generation_timecode": {"$ref": "#/$defs/timecode"},
+        "timeline_timecode": {"$ref": "#/$defs/timecode"},
+        "rhythm_anchor": {"type": "string", "minLength": 1},
+        "script_anchor": {"type": "string", "minLength": 1},
+        "required_phases": {"type": "array", "items": {"enum": ["approach", "bite", "fracture", "withdraw", "closed_mouth_chew", "speech_transition"]}, "minItems": 2, "uniqueItems": true},
+        "non_contiguous_event": {"const": true}
+      },
+      "oneOf": [
+        {"required": ["source_shot_id"], "not": {"required": ["inserted_shot_id"]}},
+        {"required": ["inserted_shot_id"], "not": {"required": ["source_shot_id"]}}
+      ],
+      "additionalProperties": false
+    },
+    "eatingPlan": {
+      "type": "object",
+      "required": ["policy", "occurrences"],
+      "properties": {
+        "policy": {
+          "type": "object",
+          "required": ["source_duration_threshold_seconds", "target_event_count", "events_are_non_contiguous", "one_event_is_not_multiple_images"],
+          "properties": {
+            "source_duration_threshold_seconds": {"const": 30},
+            "target_event_count": {"const": 3},
+            "events_are_non_contiguous": {"const": true},
+            "one_event_is_not_multiple_images": {"const": true}
+          },
+          "additionalProperties": false
+        },
+        "occurrences": {"type": "array", "items": {"$ref": "#/$defs/eatingOccurrence"}}
+      },
+      "additionalProperties": false
+    },
+    "crispProof": {
+      "type": "object",
+      "required": ["single_snap", "fracture_visible", "material_conservation_locked", "crumbs", "complementary_orange_gold_fracture", "same_stick_two_piece_conservation", "sound_sync", "foley"],
+      "properties": {
+        "single_snap": {"const": true},
+        "fracture_visible": {"const": true},
+        "material_conservation_locked": {"const": true},
+        "crumbs": {
+          "type": "object",
+          "required": ["minimum", "maximum"],
+          "properties": {
+            "minimum": {"type": "integer", "minimum": 3, "maximum": 8},
+            "maximum": {"type": "integer", "minimum": 3, "maximum": 8}
+          },
+          "additionalProperties": false
+        },
+        "complementary_orange_gold_fracture": {"type": "string", "minLength": 1},
+        "same_stick_two_piece_conservation": {"type": "string", "minLength": 1},
+        "sound_sync": {"type": "string", "minLength": 1},
+        "foley": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "breakOccurrence": {
+      "type": "object",
+      "required": ["id", "shot_id", "unit_id", "mode", "origin", "generation_timecode", "rhythm_rationale", "crisp_proof"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "shot_id": {"type": "string", "pattern": "^S[0-9]+$"},
+        "unit_id": {"type": "string", "pattern": "^(SRC|ADD)[0-9]+$"},
+        "mode": {"enum": ["person_present", "hands_only_product"]},
+        "origin": {"enum": ["source", "inserted"]},
+        "source_shot_id": {"type": "string", "pattern": "^SRC[0-9]+$"},
+        "inserted_shot_id": {"type": "string", "pattern": "^ADD[0-9]+$"},
+        "generation_timecode": {"$ref": "#/$defs/timecode"},
+        "rhythm_rationale": {"type": "string", "minLength": 1},
+        "source_evidence": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "insertion_rationale": {"type": "string", "minLength": 1},
+        "crisp_proof": {"$ref": "#/$defs/crispProof"}
+      },
+      "oneOf": [
+        {"required": ["source_shot_id", "source_evidence"], "not": {"required": ["inserted_shot_id"]}},
+        {"required": ["inserted_shot_id", "insertion_rationale"], "not": {"required": ["source_shot_id"]}}
+      ],
+      "additionalProperties": false
+    },
+    "breakPlan": {
+      "type": "object",
+      "required": ["required", "required_modes", "occurrences"],
+      "properties": {
+        "required": {"type": "boolean"},
+        "required_modes": {"type": "array", "items": {"enum": ["person_present", "hands_only_product"]}, "uniqueItems": true},
+        "occurrences": {"type": "array", "items": {"$ref": "#/$defs/breakOccurrence"}}
+      },
+      "additionalProperties": false
+    }
+  }
+}

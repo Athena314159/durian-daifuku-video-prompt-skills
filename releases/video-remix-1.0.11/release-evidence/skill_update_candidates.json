@@ -1,0 +1,28 @@
+{
+  "schema_version": "2.0",
+  "project_id": "20260825-release-1-0-11-review",
+  "candidates": [
+    {
+      "candidate_id": "CAND-DAIFUKU-ACTIVE-BITE-ORIENTATION-001",
+      "category": "product_action_topology",
+      "observed_problem": "A person-eating frame can place the intact back of an already opened daifuku at the mouth while rotating the large opening toward the camera. Even when the hole is separately classified, the orientation lacks bite-action causality and turns the food into an outward-facing display prop.",
+      "proposed_rule": "While eating or while the product remains at the mouth, require the bite opening to face the mouth/person direction, require mouth contact on the opening side, forbid camera/audience-facing openings, compile the direction into the canonical prompt and require hash-bound topology QA evidence.",
+      "scope": "cross_project",
+      "evidence": [
+        "user screenshot SHA-256 8a6ca8b44921e504e3834df9b1112f3905da85d19b70675ec15a630cb81765f3 shows the mouth contacting the intact back while a large opening faces the camera",
+        "user explicitly forbids outward-facing break openings while the person is eating and requires the opening to face generally toward the person"
+      ],
+      "target_skill": "jimeng-video-remix-director + durian-daifuku-five-states",
+      "target_resource": "durian-daifuku-v2 integrity contract; shot validator/compiler; image topology result gate; migration; eating-state references",
+      "risk_level": "high",
+      "interaction_surfaces": ["person-eating state topology", "canonical prompt", "image result QA", "legacy migration", "bite continuity"],
+      "regression_case_ids": ["GOLDEN-DAIFUKU-BITE-OPENING-INWARD-001", "GOLDEN-DAIFUKU-BITE-OPENING-CAMERA-REJECT-002"],
+      "replaces": ["bite validation that checked notch shape and origin but did not check the opening direction relative to the mouth, person and camera"],
+      "rollback_trigger": "Any person-eating candidate can pass while the opening faces the camera/audience or away from the person and the mouth contacts the intact back.",
+      "status": "approved",
+      "user_approved": true,
+      "reviewed_at": "2026-08-25T17:45:00+08:00",
+      "review_reason": "User explicitly supplied a prohibited example and required this direction rule. Candidate remains isolated until paired release gate passes."
+    }
+  ]
+}

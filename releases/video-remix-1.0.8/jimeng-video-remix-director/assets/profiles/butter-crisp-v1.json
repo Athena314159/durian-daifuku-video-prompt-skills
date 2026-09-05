@@ -1,0 +1,123 @@
+{
+  "schema_version": "1.1",
+  "profile_id": "butter-crisp-v1",
+  "name": "达尔顿黄油脆丝棒",
+  "version": 1,
+  "project_rule_overrides": {
+    "require_hands_only_break_showcase": true,
+    "require_person_present_break_showcase": true,
+    "require_break_action_beat_binding": true,
+    "packaging_visible": true
+  },
+  "scale_mode": "physical_consistency",
+  "physical_dimensions_cm": {
+    "single_stick": {"length": 12.0, "width": 2.5, "thickness": 1.0},
+    "retail_box": {"width": 15.0, "height": 15.0, "thickness": 4.5},
+    "individual_pouch": {"length": 15.0, "width": 4.5, "thickness": 2.0}
+  },
+  "immutable_traits": [
+    "单根为约12×2.5×1厘米、正面长宽比4:1–5:1的直挺细长长方体糕点",
+    "六面由短小、扁平、有厚度的橙金烘烤脆片密集搭接，能看见翘边、遮挡、窄缝和微投影",
+    "表面不是光滑橙色棒体上的贴图、压花、刻纹、面包糠、肉松或椰蓉",
+    "破损、掰断和咬口断面与外层连续，保持橙金至焦糖橙同色系，不得出现白芯或浅色夹层",
+    "一次掰断只能由同一根得到两段，长度、宽度、厚度和物质量守恒",
+    "零售盒约15×15×4.5厘米，正面1:1，厚度约为正面边长30%"
+  ],
+  "state_profiles": {
+    "retail_box_sealed": {
+      "description": "未开封橙色扁方零售盒，逐盒绑定正面、侧面、顶面母版",
+      "required": ["盒体15×15×4.5厘米", "可见印刷不裁断、不缺块、不乱码、不镜像、不重排"],
+      "forbidden": ["立方体", "长条盒", "纸片盒", "模型重绘包装文字"]
+    },
+    "individual_pouch": {
+      "description": "15×4.5×2厘米素金色枕式独立袋，内含透明浅边单根托盒",
+      "required": ["锯齿热封", "金色膜袋→透明托盒→一根产品的包含关系"],
+      "forbidden": ["短胖小袋", "无托盒", "一袋多根"]
+    },
+    "whole": {
+      "description": "完整未破橙金细长长方体脆丝棒",
+      "required": ["实体片状脆丝覆盖", "直挺不弯", "数量与位置守恒"],
+      "forbidden": ["圆柱", "光滑基底", "白色端芯"]
+    },
+    "held": {
+      "description": "人物或纯手稳定手持同一根完整脆丝棒",
+      "required": ["手指接触合理", "产品尺度与手部透视一致"],
+      "forbidden": ["手指穿透", "产品悬浮", "数量跳变"]
+    },
+    "breaking": {
+      "description": "同一根两端受反向力后一次短促脆断",
+      "required": ["棒体几乎不弯", "一次咔嚓", "3–8片橙金碎屑", "两段断面互补且物质量守恒"],
+      "forbidden": ["重复掰断", "粉尘爆炸", "白芯", "平整刀切面"]
+    },
+    "split_two_pieces": {
+      "description": "同一根掰开后的两段橙金互补断面展示",
+      "required": ["两段长度之和约等于断前", "断面橙金同色且参差多孔"],
+      "forbidden": ["第三段", "奶油层", "流心", "产品复原"]
+    },
+    "bitten": {
+      "description": "真实咬断后产品离嘴并形成同色不规则自然咬口",
+      "required": ["牙齿接触后一次脆断", "剩余长度缩短", "闭口咀嚼只按源片证据"],
+      "forbidden": ["口腔展示", "强制吞咽", "强制嗯声", "白色咬口"]
+    }
+  },
+  "break_physics": {
+    "single_snap": true,
+    "crumb_count_minimum": 3,
+    "crumb_count_maximum": 8,
+    "fracture_palette": "orange_gold_to_caramel_orange",
+    "two_piece_mass_conservation": true,
+    "required_foley": "短促咔嚓与克制碎屑声逐帧同步",
+    "occurrence_binding": {
+      "required_fields": [
+        "shot_id",
+        "origin",
+        "source_shot_ids_or_inserted_shot_id",
+        "action_beat_id",
+        "generation_timecode"
+      ],
+      "require_person_present_occurrence": true,
+      "require_hands_only_single_stick_occurrence": true,
+      "metadata_only_proof_forbidden": true
+    }
+  },
+  "package_artwork": {
+    "policy": "preserve_master_projection",
+    "minimum_legible_face_area_ratio": 0.08,
+    "face_masters": {
+      "front": null,
+      "side": null,
+      "top": null
+    },
+    "required_face_inventory": ["front", "side", "top"],
+    "visible_region_rule": "只排除源片锁定的自然遮挡或出框；本应可见区域内不得缺图案、缺文字、镜像、乱码或跨棱错位",
+    "projection_methods": ["homography", "deterministic_composite", "protected_master_projection"],
+    "forbidden": ["shrink_to_fit", "artwork_relayout", "model_redraw", "mirror_missing_face"]
+  },
+  "global_negative_constraints": [
+    "圆棒",
+    "胶囊体",
+    "光滑橙色棒体",
+    "平面贴图脆丝",
+    "面包糠炸衣",
+    "肉松",
+    "椰蓉",
+    "白芯",
+    "奶油夹层",
+    "威化层",
+    "海绵蛋糕芯",
+    "流心",
+    "芝士拉丝",
+    "爆炸式碎屑",
+    "包装文字乱码",
+    "包装图案缺块",
+    "包装镜像或重绘"
+  ],
+  "reference_assets": [
+    {"id": "product_whole", "path": null, "purpose": "完整单根几何、实体片状脆丝和橙金色", "approved": false},
+    {"id": "fracture", "path": null, "purpose": "橙金同色掰断面和自然咬口", "approved": false},
+    {"id": "package_front", "path": null, "purpose": "零售盒正面完整印刷母版", "approved": false},
+    {"id": "package_side", "path": null, "purpose": "零售盒侧面印刷与跨棱登记母版", "approved": false},
+    {"id": "package_top", "path": null, "purpose": "零售盒顶面印刷母版", "approved": false}
+  ],
+  "updated_at": "2026-08-22T00:00:00+08:00"
+}
