@@ -6,6 +6,11 @@ HERE=Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import canonical_pipeline
 
+def expect_block(args, label):
+    result = subprocess.run(args, capture_output=True, text=True)
+    if result.returncode == 0:
+        raise AssertionError(f"{label}未被阻断")
+
 assert canonical_pipeline.required_eating_count(19.99) == 0
 assert canonical_pipeline.required_eating_count(20.0) == 3
 assert canonical_pipeline.required_eating_count(49.99) == 5
@@ -52,4 +57,54 @@ with tempfile.TemporaryDirectory() as td:
     src.write_text(json.dumps(data,ensure_ascii=False))
     subprocess.run(["python3",str(HERE/"canonical_pipeline.py"),"compile",str(src),str(build)],check=True)
     subprocess.run(["python3",str(HERE/"canonical_pipeline.py"),"validate",str(build)],check=True)
+
+    # A delivery-mode project cannot claim completion while images are still pending.
+    delivery = json.loads(src.read_text())
+    delivery["operation_mode"] = "full_delivery"
+    delivery_path = root / "delivery-mode.json"
+    delivery_path.write_text(json.dumps(delivery, ensure_ascii=False))
+    expect_block(["python3", str(HERE/"canonical_pipeline.py"), "compile", str(delivery_path), str(root/"delivery-mode-build")], "full_delivery缺图")
+    dry_result = root/"seedream-dry-run.json"
+    subprocess.run(["python3", str(HERE/"seedream_ark.py"), "submit", str(build), str(dry_result), "--dry-run"], check=True)
+    dry_payload = json.loads(dry_result.read_text())
+    assert len(dry_payload["tasks"]) == len(shots)
+    assert all(item.get("request_summary", {}).get("prompt_sha256") for item in dry_payload["tasks"])
+
+    # Regression: a missing prompt must stop compilation.
+    missing_prompt = json.loads(src.read_text())
+    missing_prompt["generation_shots"][0].pop("prompt_file")
+    missing_prompt_path = root/"missing-prompt.json"
+    missing_prompt_path.write_text(json.dumps(missing_prompt, ensure_ascii=False))
+    expect_block(["python3", str(HERE/"canonical_pipeline.py"), "compile", str(missing_prompt_path), str(root/"missing-prompt-build")], "缺prompt_file")
+
+    # Regression: a missing reference must stop compilation before a provider call.
+    missing_reference = json.loads(src.read_text())
+    missing_reference["generation_shots"][0]["reference_assets"] = [str(root/"does-not-exist.png")]
+    missing_reference_path = root/"missing-reference.json"
+    missing_reference_path.write_text(json.dumps(missing_reference, ensure_ascii=False))
+    expect_block(["python3", str(HERE/"canonical_pipeline.py"), "compile", str(missing_reference_path), str(root/"missing-reference-build")], "参考丢失")
+
+    # Regression: a source frame cannot be declared as the approved image.
+    masquerade = json.loads(src.read_text())
+    masquerade["generation_shots"][0]["approved_image_path"] = masquerade["generation_shots"][0]["source_frame"]
+    masquerade["generation_shots"][0]["approved_image_sha256"] = masquerade["generation_shots"][0]["source_frame_sha256"]
+    masquerade_path = root/"source-as-approved.json"
+    masquerade_path.write_text(json.dumps(masquerade, ensure_ascii=False))
+    expect_block(["python3", str(HERE/"canonical_pipeline.py"), "compile", str(masquerade_path), str(root/"source-as-approved-build")], "源帧冒充批准图")
+
+    # Regression: both prompt text and script-map body are protected by hashes.
+    prompt_path = Path(shots[0]["prompt_file"])
+    original_prompt = prompt_path.read_text()
+    try:
+        prompt_path.write_text(original_prompt + "\n篡改")
+        expect_block(["python3", str(HERE/"canonical_pipeline.py"), "validate", str(build)], "Prompt正文篡改")
+    finally:
+        prompt_path.write_text(original_prompt)
+    script_map = build/"script_shot_map.json"
+    original_map = script_map.read_text()
+    try:
+        script_map.write_text(original_map.replace("测试口播1。", "被篡改的口播。"))
+        expect_block(["python3", str(HERE/"canonical_pipeline.py"), "validate", str(build)], "script map正文篡改")
+    finally:
+        script_map.write_text(original_map)
 print("V2 SELF TEST PASSED")

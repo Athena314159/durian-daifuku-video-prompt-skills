@@ -12,6 +12,48 @@ def sha(path):
         for chunk in iter(lambda:f.read(1024*1024), b""): h.update(chunk)
     return h.hexdigest()
 
+def resolve_file(value, base):
+    """Resolve a project path without changing the path stored in manifests."""
+    path = Path(value)
+    return path if path.is_absolute() else (base / path).resolve()
+
+def reference_entries(shot):
+    """Return reference file records from either supported input spelling."""
+    raw = shot.get("reference_assets")
+    if raw is None:
+        raw = shot.get("references", [])
+    if isinstance(raw, dict) and not any(key in raw for key in ("path", "file", "image_path", "asset_path")):
+        raw = [{"path": value} for value in raw.values()]
+    elif isinstance(raw, (str, dict)):
+        raw = [raw]
+    if not isinstance(raw, list):
+        err(f"{shot.get('shot_id')}参考资产必须是列表")
+    entries = []
+    for item in raw:
+        if isinstance(item, str):
+            entries.append({"path": item})
+            continue
+        if not isinstance(item, dict):
+            err(f"{shot.get('shot_id')}参考资产格式无效")
+        path = item.get("path") or item.get("file") or item.get("image_path") or item.get("asset_path")
+        if not path:
+            err(f"{shot.get('shot_id')}参考资产缺路径")
+        entries.append({"path": path, "sha256": item.get("sha256") or item.get("hash")})
+    return entries
+
+def validate_reference_files(shot, base_dir):
+    """Validate references before they can reach a provider request."""
+    checked = []
+    for item in reference_entries(shot):
+        path = resolve_file(item["path"], base_dir)
+        if not path.exists() or not path.is_file():
+            err(f"{shot.get('shot_id')}参考资产不存在：{path}")
+        digest = sha(path)
+        if item.get("sha256") and digest != item["sha256"]:
+            err(f"{shot.get('shot_id')}参考资产哈希不一致：{path}")
+        checked.append({"path": item["path"], "resolved_path": str(path), "sha256": digest})
+    return checked
+
 def err(msg): raise ValueError(msg)
 
 def required_eating_count(duration_seconds):
@@ -97,7 +139,7 @@ def compile_project(source_path, out_dir):
             err(f"{shot.get('shot_id')} shot_mode与person_visible冲突")
         if shot.get("shot_mode") in {"hands_only","product_macro"} and shot.get("person_visible") is True:
             err(f"{shot.get('shot_id')} shot_mode与person_visible冲突")
-        frame_path=Path(shot.get("source_frame", ""))
+        frame_path=resolve_file(shot.get("source_frame", ""), source_path.parent)
         declared_frame_hash=shot.get("source_frame_sha256")
         if not frame_path.exists():
             err(f"{shot.get('shot_id')}源帧不存在：{frame_path}")
@@ -134,16 +176,36 @@ def compile_project(source_path, out_dir):
             if not gs.get(field): err(f"{s['shot_id']}缺语义字段：{field}")
         if len(gs.get("secondary_emotions",[]))<2: err(f"{s['shot_id']}并行情绪少于2项")
         pf=s.get("prompt_file")
-        if not pf or not Path(pf).exists(): err(f"{s['shot_id']}缺有效canonical Prompt文件")
-        validate_prompt_role(Path(pf), s)
-        validate_source_performance_contract(gs, s, Path(pf), performance_contract_enabled)
+        prompt_path=resolve_file(pf, source_path.parent) if pf else Path("")
+        if not pf or not prompt_path.exists() or not prompt_path.is_file(): err(f"{s['shot_id']}缺有效canonical Prompt文件")
+        validate_prompt_role(prompt_path, s)
+        validate_source_performance_contract(gs, s, prompt_path, performance_contract_enabled)
+        validate_reference_files(s, source_path.parent)
+        geometry=s.get("geometry_guide")
+        geometry_hash=s.get("geometry_guide_sha256")
+        if geometry_hash and not geometry:
+            err(f"{s['shot_id']}geometry_guide_sha256缺geometry_guide")
+        if geometry_hash and isinstance(geometry, str):
+            geometry_path=resolve_file(geometry, source_path.parent)
+            if not geometry_path.exists() or not geometry_path.is_file():
+                err(f"{s['shot_id']}geometry guide不存在：{geometry_path}")
+            if sha(geometry_path) != geometry_hash:
+                err(f"{s['shot_id']}geometry guide哈希不一致")
         approved=s.get("approved_image_path")
         if approved:
-            approved_path=Path(approved)
-            if not approved_path.exists(): err(f"{s['shot_id']}批准图不存在：{approved_path}")
+            approved_path=resolve_file(approved, source_path.parent)
+            if not approved_path.exists() or not approved_path.is_file(): err(f"{s['shot_id']}批准图不存在：{approved_path}")
             declared=s.get("approved_image_sha256")
-            if declared and sha(approved_path) != declared:
+            if not declared:
+                err(f"{s['shot_id']}批准图缺少approved_image_sha256")
+            approved_digest=sha(approved_path)
+            if approved_digest != declared:
                 err(f"{s['shot_id']}批准图哈希不一致")
+            shot_frame_path=resolve_file(s.get("source_frame", ""), source_path.parent)
+            if approved_digest == s.get("source_frame_sha256") or approved_path == shot_frame_path:
+                err(f"{s['shot_id']}源帧与批准图相同，禁止把源帧冒充批准图")
+        elif s.get("approved_image_sha256"):
+            err(f"{s['shot_id']}存在批准图哈希但缺approved_image_path")
     mirror={x.get("id") for x in gate.get("source_action_mirror",[])}
     required_source=set(data.get("source_coverage",{}).get("required_source_shot_ids",[]))
     if required_source and mirror != required_source: err("source_action_mirror未覆盖全部SRC源镜头")
@@ -190,6 +252,10 @@ def compile_project(source_path, out_dir):
 
     target=float(data["target_duration_seconds"])
     operation_mode=data.get("operation_mode","prompt_only")
+    if operation_mode in {"full_delivery", "video_generation"}:
+        missing_images=[s["shot_id"] for s in shots if not s.get("approved_image_path")]
+        if missing_images:
+            err("BLOCK_INCOMPLETE_IMAGE_DELIVERY：" + ",".join(missing_images))
     video_provider=data.get("video_generation_provider")
     video_status=("READY_FOR_SUBMIT" if video_provider else
                   "BLOCKED_VIDEO_BACKEND" if operation_mode=="video_generation" else
@@ -260,6 +326,8 @@ def compile_project(source_path, out_dir):
     }
     image_tasks=[]; prompt_tasks=[]
     for s in shots:
+        prompt_path=resolve_file(s["prompt_file"], source_path.parent)
+        checked_references=validate_reference_files(s, source_path.parent)
         image_tasks.append({
             "shot_id":s["shot_id"],"source_frame":s.get("source_frame"),
             "provider":image_provider,
@@ -268,6 +336,17 @@ def compile_project(source_path, out_dir):
             "product_state":s.get("product_state","route_from_source_action"),"bbox_xywh":s.get("bbox_xywh"),
             "scale_anchors":s.get("scale_anchors",[]),
             "shot_mode":s.get("shot_mode"),
+            "prompt_file":s.get("prompt_file"),
+            "prompt_file_sha256":sha(prompt_path),
+            "prompt_content_sha256":sha(prompt_path),
+            "avatar_id":s.get("avatar_id"),
+            "reference_assets":s.get("reference_assets"),
+            "references":s.get("references"),
+            "reference_file_hashes":checked_references,
+            "packaging_lock":s.get("packaging_lock"),
+            "geometry_guide":s.get("geometry_guide"),
+            "geometry_guide_sha256":s.get("geometry_guide_sha256"),
+            "arrangement_lock":s.get("arrangement_lock"),
             "approved_image_path":s.get("approved_image_path"),
             "approved_image_sha256":s.get("approved_image_sha256"),
             "image_status":"user_approved" if s.get("approved_image_path") else "awaiting_generation",
@@ -277,7 +356,8 @@ def compile_project(source_path, out_dir):
             "shot_id":s["shot_id"],"total_duration_seconds":s.get("duration_seconds"),
             "line_ids":s.get("line_ids",[]),"source_action":s.get("source_action",""),
             "prompt_file":s.get("prompt_file"),
-            "prompt_file_sha256":sha(Path(s["prompt_file"])),
+            "prompt_file_sha256":sha(prompt_path),
+            "prompt_content_sha256":sha(prompt_path),
             "shot_mode":s.get("shot_mode"),
             "story_chain":["cause_cue","intention","gaze","microexpression","hand_mouth_action","product_physics","sensory_feedback","emotion_landing","voice_breath","camera_exit"],
             "two_stage_compile":["fact_action_script","strong_human_narrative_enhancement"],
@@ -292,7 +372,12 @@ def compile_project(source_path, out_dir):
     dump(out/"prompt_task_manifest.json",{"tasks":prompt_tasks})
     dump(out/"rule_receipt.json",receipt)
     receipt["compiled_canonical_sha256"]=sha(out/"canonical_project.json")
-    receipt["prompt_file_sha256"]={s["shot_id"]:sha(Path(s["prompt_file"])) for s in shots}
+    receipt["prompt_file_sha256"]={s["shot_id"]:sha(resolve_file(s["prompt_file"], source_path.parent)) for s in shots}
+    receipt["script_shot_map_sha256"]=sha(out/"script_shot_map.json")
+    receipt["script_map_sha256"]=receipt["script_shot_map_sha256"]
+    receipt["script_content_sha256"]=receipt["script_shot_map_sha256"]
+    receipt["image_task_manifest_sha256"]=sha(out/"image_task_manifest.json")
+    receipt["prompt_task_manifest_sha256"]=sha(out/"prompt_task_manifest.json")
     # Rewrite the receipt after recording the compiled artifact hashes.
     dump(out/"rule_receipt.json",receipt)
     print(json.dumps({"status":receipt["status"],"build_dir":str(out),"shots":len(shots),"lines":len(lines),"eating":len(eating),"tearing":len(tearing),"video_generation_status":video_status},ensure_ascii=False))
@@ -311,9 +396,64 @@ def validate(build_dir):
     prompt_manifest=json.loads((root/"prompt_task_manifest.json").read_text()).get("tasks",[])
     for task in prompt_manifest:
         expected_hash=receipt.get("prompt_file_sha256",{}).get(task.get("shot_id"))
-        if not expected_hash or task.get("prompt_file_sha256") != expected_hash:
+        prompt_path=resolve_file(task.get("prompt_file", ""), root)
+        if not prompt_path.exists() or not prompt_path.is_file():
+            err(f"BLOCK_STALE_BUILD：{task.get('shot_id')} Prompt文件不存在")
+        actual_prompt_hash=sha(prompt_path)
+        if (not expected_hash or task.get("prompt_file_sha256") != expected_hash
+                or task.get("prompt_content_sha256", task.get("prompt_file_sha256")) != actual_prompt_hash
+                or actual_prompt_hash != task.get("prompt_file_sha256")):
             err(f"BLOCK_STALE_BUILD：{task.get('shot_id')} Prompt哈希缺失或已变化")
+    image_manifest=json.loads((root/"image_task_manifest.json").read_text()).get("tasks",[])
+    if len(image_manifest) != len(canonical.get("generation_shots", [])):
+        err("image_task_manifest镜头数量与canonical不一致")
+    for task in image_manifest:
+        shot_id=task.get("shot_id")
+        source_path=resolve_file(task.get("source_frame", ""), root)
+        if not source_path.exists() or not source_path.is_file():
+            err(f"BLOCK_STALE_BUILD：{shot_id}源帧不存在")
+        if not task.get("source_frame_sha256") or sha(source_path) != task.get("source_frame_sha256"):
+            err(f"BLOCK_STALE_BUILD：{shot_id}源帧哈希缺失或已变化")
+        image_prompt_path=resolve_file(task.get("prompt_file", ""), root)
+        if (not image_prompt_path.exists() or not image_prompt_path.is_file()
+                or not task.get("prompt_file_sha256")
+                or sha(image_prompt_path) != task.get("prompt_file_sha256")
+                or task.get("prompt_content_sha256", task.get("prompt_file_sha256")) != sha(image_prompt_path)):
+            err(f"BLOCK_STALE_BUILD：{shot_id} image task Prompt哈希缺失或已变化")
+        geometry = task.get("geometry_guide")
+        geometry_hash = task.get("geometry_guide_sha256")
+        if geometry_hash and not geometry:
+            err(f"BLOCK_STALE_BUILD：{shot_id} geometry guide缺失")
+        if geometry_hash and isinstance(geometry, str):
+            geometry_path = resolve_file(geometry, root)
+            if not geometry_path.exists() or not geometry_path.is_file() or sha(geometry_path) != geometry_hash:
+                err(f"BLOCK_STALE_BUILD：{shot_id} geometry guide不存在或哈希已变化")
+        approved=task.get("approved_image_path")
+        approved_hash=task.get("approved_image_sha256")
+        if approved:
+            approved_path=resolve_file(approved, root)
+            if not approved_hash:
+                err(f"BLOCK_STALE_BUILD：{shot_id}批准图缺少哈希")
+            if not approved_path.exists() or not approved_path.is_file() or sha(approved_path) != approved_hash:
+                err(f"BLOCK_STALE_BUILD：{shot_id}批准图不存在或哈希已变化")
+            if approved_hash == task.get("source_frame_sha256") or approved_path == source_path:
+                err(f"BLOCK_STALE_BUILD：{shot_id}源帧与批准图相同")
+        elif approved_hash:
+            err(f"BLOCK_STALE_BUILD：{shot_id}存在批准图哈希但缺批准图")
+        for ref in task.get("reference_file_hashes", []):
+            ref_path=resolve_file(ref.get("path", ""), root)
+            if not ref_path.exists() or not ref_path.is_file() or sha(ref_path) != ref.get("sha256"):
+                err(f"BLOCK_STALE_BUILD：{shot_id}参考资产不存在或哈希已变化")
+    image_hash=receipt.get("image_task_manifest_sha256")
+    if not image_hash or sha(root/"image_task_manifest.json") != image_hash:
+        err("BLOCK_STALE_BUILD：image_task_manifest哈希不一致")
+    prompt_manifest_hash=receipt.get("prompt_task_manifest_sha256")
+    if not prompt_manifest_hash or sha(root/"prompt_task_manifest.json") != prompt_manifest_hash:
+        err("BLOCK_STALE_BUILD：prompt_task_manifest哈希不一致")
     mapping=json.loads((root/"script_shot_map.json").read_text())["lines"]
+    map_hash=receipt.get("script_shot_map_sha256")
+    if not map_hash or sha(root/"script_shot_map.json") != map_hash:
+        err("BLOCK_STALE_BUILD：script_shot_map正文已变化")
     expected=[x["line_id"] for x in canonical["script_lines"]]
     actual=[x["line_id"] for x in mapping]
     if actual!=expected: err("script_shot_map漏句、重复或逆序")

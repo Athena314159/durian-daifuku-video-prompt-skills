@@ -12,6 +12,7 @@
 
 - `scripts/canonical_pipeline.py`：编译和校验项目。
 - `scripts/seedream_ark.py`：把已经通过校验的静态图任务提交到 Ark/Seedream。
+- `scripts/export_docx_from_build.py`：把已生成且带 QA 哈希的 Canonical 结果排版成 DOCX，并输出对齐收据。
 - `scripts/self_test.py`：检查 V2 系统本身是否正常。
 - `assets/canonical_project.template.json`：项目配置模板。
 - `references/canonical-contract.md`：完整规则，遇到冲突以它为准。
@@ -128,3 +129,18 @@ export ARK_API_KEY='你的火山引擎 Ark Key'
 源视频观察 → 建立 SRC 镜头表 → 为每个正式镜头锁定源帧和哈希 → 明确 line ID → 写人物/手部/微距证据 → 编译 → 校验 → Seedream 干跑 → 有凭证时提交静态图 → 接入视频 provider 后再单独提交、等待、校验视频。
 
 任何一步失败都只修对应的镜头或字段。不要为了“让数量看起来对”新增没有源片依据的镜头，也不要把原视频图片重新塞回已经批准的生成图任务。
+
+## 第五步：导出 DOCX（必须先有 QA 图）
+
+DOCX 导出器只消费 `build` 中的五个 Canonical manifest。每个 `selected_shots` 必须同时有当前口播映射、当前 Prompt，以及 `user_approved` 或已生成的 QA 图和对应 SHA-256。`awaiting_generation`、缺图、哈希不一致，或 Prompt/口播映射过期，都会在写入 DOCX 前硬阻断。
+
+使用工作区自带的 Python 运行时（已包含 `python-docx`）：
+
+```bash
+"$PY" scripts/export_docx_from_build.py \
+  /绝对路径/build \
+  /绝对路径/delivery.docx \
+  --alignment-manifest /绝对路径/alignment_manifest.json
+```
+
+成功时会为每个镜头按同一顺序写入口播、Prompt 和 QA 图，并生成 `alignment_manifest.json`，记录每一项的文件路径、哈希和 DOCX 段落位置。导出失败不会留下可被误认为完整交付的 DOCX。

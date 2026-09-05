@@ -20,6 +20,8 @@ description: Run a canonical, non-bypassable Jimeng commercial-video remix syste
 2. 编译器会强制读取并校验语义门禁；只允许使用编译结果中的 `semantic_role_performance_gate.json`、`final_generation_manifest.json`、`script_shot_map.json`、`image_task_manifest.json`、`prompt_task_manifest.json` 和 `rule_receipt.json`。
 3. 没有有效收据、源帧哈希或任务manifest时，不得正式调用生图、视频生成或DOCX导出。
 
+源视频交接与改稿使用 `scripts/source_handoff.py`：先把已完成的源片转录规范化为绑定源视频哈希的 `source_intake.json`，交给用户确认/修改；用户交回完整新版口播后生成 `revision_impact.json`。line ID集合不完整、源视频哈希改变或已有Prompt/图片受影响时，旧语义门、Prompt、图片状态和DOCX均进入过期状态，必须重新编译，不得只改 `script_shot_map` 正文。
+
 ## 自动工作流
 
 1. 按源片硬切建立镜头；连续运镜自动合并。原子帧只是同镜状态，不按图片数量拆镜。`generation_shots`必须携带有序`source_shot_ids`、源帧哈希和`shot_mode`；图片数量不能生成新的S编号。
@@ -31,6 +33,8 @@ description: Run a canonical, non-bypassable Jimeng commercial-video remix syste
 7. Prompt分两阶段：先编译事实动作脚本，再增强为强烈活人感叙事。人物、纯手部、微距和纯产品按`shot_mode`分流。启用源片表演证据合同时，人物镜头必须从原片记录的视线轨迹、眉眼微反应、肩线/重心、双手职责、声音观察和情绪落点写出连续因果，Prompt还必须回写源片动作锚点；情绪不能靠固定形容词或重复段落代替。负面限制不超过必要范围，复制区不输出内部“触发”字段。
 8. 自动QA后最多自修复两轮。只对无法消解的说话人、屏内/画外或身份参考冲突询问一次。
 9. DOCX只负责排版Canonical结果，不决定镜头、台词或资产；没有视频后端、凭证或返回结果时，状态停在`BLOCKED_VIDEO_BACKEND`，不把DOCX/PDF称为视频交付。
+
+DOCX 只能由 `scripts/export_docx_from_build.py` 从同一编译目录读取五份清单导出。它会逐镜核对当前口播、Prompt文件哈希、批准/生成QA图和图片哈希；任一镜头缺图、仍为`awaiting_generation`、图文状态不符或构建过期时直接阻断，不写出部分完成文档。`rewrite_docx_v3.py` 等项目历史脚本不是V2入口。
 
 图像生成后端
 

@@ -1,8 +1,11 @@
 {
   "project_id": "example-project",
   "source_video": "/absolute/path/source.mp4",
+  "source_video_sha256": "replace-with-source-video-sha256",
   "target_duration_seconds": 20.0,
   "operation_mode": "prompt_only",
+  "source_intake_file": "/absolute/path/source_intake.json",
+  "script_version": "replace-with-script-sha256",
   "performance_contract_version": "2.1-source-evidence",
   "project_rules": {
     "eating_policy": {"threshold_seconds": 20, "base_target": 3, "extra_every_seconds": 10},
