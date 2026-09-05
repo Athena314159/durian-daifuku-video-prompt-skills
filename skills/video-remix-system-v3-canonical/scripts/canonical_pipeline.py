@@ -215,7 +215,7 @@ def compile_project(source_path, out_dir):
         err("不可变说话人键未与语义门禁一致")
     template_path=Path(data.get("eating_template_file", gate.get("eating_template",{}).get("file", "")))
     if not template_path.is_absolute(): template_path=(source_path.parent/template_path).resolve()
-    if not template_path.exists(): err("榴莲大福吃食模板不存在："+str(template_path))
+    if not template_path.exists(): err("产品吃食模板不存在："+str(template_path))
     template=json.loads(template_path.read_text())
     template_ids=set((template.get("templates") or {}).keys())
     bindings=data.get("eating_template_bindings") or gate.get("eating_template",{}).get("template_ids") or {}

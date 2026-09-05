@@ -1,6 +1,6 @@
 ---
 name: extract-video-prompt
-description: Analyze a user-supplied source video, hand off its spoken script and visible subtitles for revision, lock every speaker's identity and on-screen/off-screen position, inventory and reuse approved historical avatar/face, product/package, scene/shot, and prior Word assets before regenerating only justified gaps, then reproduce source actions and detailed human performance in Jimeng-ready shot prompts while replacing the product with a physically consistent approved target such as a durian daifuku or 达尔顿黄油脆丝棒. Diagnose and recover face-edit, first-frame, prompt-length, storyboard reinsertion, and Word-delivery failures in the same workflow. Invoke for “提取视频prompt”, “大福拆视频”, “黄油脆丝棒视频改款”, “换产品逐分镜”, “换脸返工”, “复用之前做好的图”, “只补缺失镜头”, “Prompt 字数接不上”, “重新生成即梦 Word” or equivalent instructions. If the user has not returned a revised script, deliver the editable original transcript first and continue only source analysis. If ordinary summarization or transcription may be intended, ask before invoking.
+description: Analyze a user-supplied source video, hand off its spoken script and visible subtitles for revision, lock every speaker's identity and on-screen/off-screen position, inventory and reuse approved historical avatar/face, product/package, scene/shot, and prior Word assets before regenerating only justified gaps, then reproduce source actions and detailed human performance in Jimeng-ready shot prompts while replacing the source product with a physically consistent approved target product. Diagnose and recover face-edit, first-frame, prompt-length, storyboard reinsertion, and Word-delivery failures in the same workflow. Invoke for “提取视频prompt”, “产品替换视频”, “换产品逐分镜”, “换脸返工”, “复用之前做好的图”, “只补缺失镜头”, “Prompt 字数接不上”, “重新生成即梦 Word” or equivalent instructions. If the user has not returned a revised script, deliver the editable original transcript first and continue only source analysis. If ordinary summarization or transcription may be intended, ask before invoking.
 ---
 
 # 提取视频prompt skill
@@ -24,8 +24,8 @@ description: Analyze a user-supplied source video, hand off its spoken script an
 ## 必读路由
 
 - 完整任务使用当前 `$jimeng-video-remix-director` 作为项目与首帧底座。
-- 任一镜头出现榴莲大福时，读取当前 `$durian-daifuku-five-states` 的产品规格、参考图角色和所需视频状态链。
-- 目标产品为黄油脆丝棒时，完整读取 [references/products/butter-crisp-stick.md](references/products/butter-crisp-stick.md)，并按其资产路由查看实际像素；不要读取或注入榴莲大福状态。
+- 任一镜头出现目标产品时，读取当前选定产品 Skill 的产品规格、参考图角色和所需视频状态链。
+- 目标产品使用专用产品参考时，完整读取对应的产品参考文件，并按其资产路由查看实际像素；不要读取或注入其他产品状态。
 - 用户要求“给XX镜头做掰开画面”、掰断、酥脆掉渣或展示掰开横截面时，再完整读取 [references/products/butter-crisp-break-case.md](references/products/butter-crisp-break-case.md)，把案例的单根受力、一次脆断、克制掉渣、橙金同色不规则互补断面写入指定镜头；禁止写成两根完整棒分离或平整切面。
 - 目标产品是其他食品时，先查看用户参考图并建立项目级临时规格；未获用户明确要求前，不把临时规格写回 Skill 知识库。
 - 进入角色识别、表演细化或内容审核时，完整读取 [references/semantic-role-performance-gate.md](references/semantic-role-performance-gate.md)。
@@ -251,9 +251,9 @@ description: Analyze a user-supplied source video, hand off its spoken script an
 
 先按用户明确目标选择且只选择一个产品规范。不同产品的形态、状态、包装、断面、掉屑和吃法不得互相继承。
 
-### 榴莲大福
+### 目标产品规则（按项目选定的产品 profile）
 
-按当前五形态 Skill 内部路由选择状态；只注入本镜需要的规则。
+按当前产品 Skill 内部路由选择状态；只注入本镜需要的规则。
 
 用户交付中使用中文名称：
 

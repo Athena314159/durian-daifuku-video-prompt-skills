@@ -1,7 +1,7 @@
 ---
 name: jimeng-video-remix-director
 description: >-
-  Build and operate a persistent commercial workflow for Jimeng short-video adaptation, including transcript-first source intake, automatic paired image/text task creation with exact sidebar naming, source-video and subtitle analysis, voice-over/on-screen speech/silence decisions, story logic and pacing, shot and action-beat splitting, exact temporal first frames kept separate from beauty keyframes, cross-project inventory and reuse of approved avatar/face, product/package, scene/shot, and prior Word assets before any regeneration, product replacement using the selected product-specific bible such as durian daifuku or 达尔顿黄油脆丝棒, prompt compilation, approved-first-frame validation, supplied-Jimeng-result review, failed product geometry or texture recovery, and avatar/product library management. Use for 图文双Agent、自动开两个对话、一个跑图一个跑文、先提取原片口播、即梦/Jimeng UGC、原视频复刻、字幕稿匹配、逐镜首帧、换脸、换产品、历史成品帧复用、只补缺失镜头、黄油脆丝棒、包装尺寸、产品材质走样、改图、Prompt 拆解、生成结果审核或本地视频工作台流程。
+  Build and operate a persistent commercial workflow for Jimeng short-video adaptation, including transcript-first source intake, automatic paired image/text task creation with exact sidebar naming, source-video and subtitle analysis, voice-over/on-screen speech/silence decisions, story logic and pacing, shot and action-beat splitting, exact temporal first frames kept separate from beauty keyframes, cross-project inventory and reuse of approved avatar/face, product/package, scene/shot, and prior Word assets before any regeneration, product replacement using the selected product-specific bible, prompt compilation, approved-first-frame validation, supplied-Jimeng-result review, failed product geometry or texture recovery, and avatar/product library management. Use for 图文双Agent、自动开两个对话、一个跑图一个跑文、先提取原片口播、即梦/Jimeng UGC、原视频复刻、字幕稿匹配、逐镜首帧、换脸、换产品、历史成品帧复用、只补缺失镜头、包装尺寸、产品材质走样、改图、Prompt 拆解、生成结果审核或本地视频工作台流程。
 ---
 
 # 即梦视频改款导演
@@ -32,7 +32,7 @@ description: >-
 2. 用户确认或修改后的新版口播稿。
 3. 仅在用户明确要求换品时，取得目标产品参考图或已批准的对应产品库条目。
 
-用户未明确要求换品时，默认 `product_mode=preserve_source_product`：保留原片产品，不索要目标产品参考，不把项目或分支标记为 `blocked`。只有用户明确要求换品且缺目标产品参考时，登记非失败的 `pending_inputs=["target_product_reference"]`；已完成的视觉/口播 intake 仍保持对应 `*_ready` 状态。这不妨碍先完成原片口播和视觉 intake。缺少新版口播时可以提取素材和分析原片，但不要决定最终人物讲话/画外音比例，也不要编译最终 Prompt。每个换品项目只选择一个产品规范；目标为黄油脆丝棒时，使用 `$extract-video-prompt` 的 `references/products/butter-crisp-stick.md` 与实际资产，不得注入榴莲大福物理。阶段、产品模式、等待输入与 handoff 合同见 [references/source-intake-contract.md](references/source-intake-contract.md)。
+用户未明确要求换品时，默认 `product_mode=preserve_source_product`：保留原片产品，不索要目标产品参考，不把项目或分支标记为 `blocked`。只有用户明确要求换品且缺目标产品参考时，登记非失败的 `pending_inputs=["target_product_reference"]`；已完成的视觉/口播 intake 仍保持对应 `*_ready` 状态。这不妨碍先完成原片口播和视觉 intake。缺少新版口播时可以提取素材和分析原片，但不要决定最终人物讲话/画外音比例，也不要编译最终 Prompt。每个换品项目只选择一个产品规范；专用产品参考必须通过对应的产品 Skill 和实际资产路由，不得注入其他产品物理。阶段、产品模式、等待输入与 handoff 合同见 [references/source-intake-contract.md](references/source-intake-contract.md)。
 
 ## 核心边界
 

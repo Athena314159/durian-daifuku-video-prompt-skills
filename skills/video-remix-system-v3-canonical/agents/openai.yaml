@@ -1,4 +1,4 @@
 interface:
   display_name: "视频改款系统 V3 Canonical"
   short_description: "单一事实源、不可绕过编译、自动图文同步与强叙事Prompt系统。"
-  default_prompt: "使用视频改款系统V3 Canonical完成源视频换品、首帧、图像、Prompt与DOCX交付。"
+  default_prompt: "使用视频改款系统V3 Canonical完成源视频产品替换、首帧、图像、Prompt与DOCX交付。"

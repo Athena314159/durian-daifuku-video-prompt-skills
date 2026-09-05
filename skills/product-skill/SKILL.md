@@ -1,11 +1,11 @@
 ---
 name: durian-daifuku-five-states
-description: Replace the main food product in an existing image with a physically consistent approximately 7 cm durian daifuku, or generate, edit, and validate its five product states and video transitions. Use when Codex needs to 换主体、换食品、把原产品换成榴莲大福、改图、生成榴莲大福图片、人物吃大福、双手撕大福、横截面、两半满馅、即梦视频 Prompt、跨人物跨场景产品一致性、中文生图 Prompt、参考图角色控制或严格像素 QA.
+description: Replace the main product in an existing image with a physically consistent approved target product, or generate, edit, and validate its approved product states and video transitions. Use when Codex needs to 换主体、换食品、把原产品替换为目标产品、改图、生成产品图片、人物吃食、双手掰开、横截面、两半展示、即梦视频 Prompt、跨人物跨场景产品一致性、中文生图 Prompt、参考图角色控制或严格像素 QA.
 ---
 
-# 榴莲大福主体替换、五形态与视频连续性
+# 目标产品主体替换、批准形态与视频连续性
 
-当前产品合同为用户于 2026-08-25 明确批准进入发布候选的 `durian-daifuku-v2`。只有与 `jimeng-video-remix-director` 成对发布门全部通过并安装后才能称为正式 live 版本；旧 `durian-daifuku-v1` 只保留旧项目回放，不得用于新项目。
+当前目标产品合同由项目选定并批准的产品 profile 提供。只有与 `jimeng-video-remix-director` 成对发布门全部通过并安装后才能称为正式 live 版本；历史 profile 只保留旧项目回放，不得用于新项目。
 
 ## 必读路由
 
@@ -13,7 +13,7 @@ description: Replace the main food product in an existing image with a physicall
 
 - 所有任务先读 `references/product-spec-and-reference-roles.md`。
 - 任务使用用户自备图片、视频关键帧或包装盒时，再读 `references/user-media-reference-map.md`；按其中的角色边界选择资产，不能把动作参考当产品外观母版。
-- 用户要求把图片中的主体食品换成榴莲大福时，再读 `references/image-subject-replacement.md` 和当前一个状态模块。
+- 用户要求把图片中的主体食品替换为当前批准产品时，再读 `references/image-subject-replacement.md` 和当前一个状态模块。
 - 生成或编辑静态五形态时，再读 `references/five-state-prompts-v8-pending.md`；只加载公共基底与当前一个状态/终点。
 - 生成人物吃、双手撕或其他连续视频 Prompt 时，再读 `references/video-state-machine.md`。
 - 画面含真实咬口、两颗/三颗手持、盘/容器多实例、独立包装或包装盒时，再读 `references/instance-topology-and-layout-continuity.md`。

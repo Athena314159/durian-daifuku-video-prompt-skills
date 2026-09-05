@@ -26,7 +26,7 @@ def write_build(root: Path, image_status: str = "user_approved", mutate_prompt: 
     build = root / "build"
     build.mkdir(parents=True)
     prompt = root / "S001.md"
-    prompt.write_text("镜头一：人物抬手展示榴莲大福。", encoding="utf-8")
+    prompt.write_text("镜头一：人物抬手展示替换产品。", encoding="utf-8")
     prompt_hash = digest(prompt)
     image = root / "S001.png"
     image.write_bytes(PNG_1X1)

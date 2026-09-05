@@ -1,6 +1,6 @@
 ---
 name: video-remix-system-v3-canonical
-description: Run a canonical, non-bypassable Jimeng commercial-video remix system for source-video analysis, exact source-frame product and packaging replacement, automatic role/speaker mapping, 20-second eating and two-tear planning, durian-daifuku state routing, strong human narrative Prompt compilation, image/text synchronization, QA, and DOCX delivery. Use when the user explicitly asks to test V3/Canonical/新版系统 or wants the fully automated recommended workflow with one source of truth and no direct-generation bypass.
+description: Run a canonical, non-bypassable Jimeng commercial-video remix system for source-video analysis, exact source-frame product and packaging replacement, automatic role/speaker mapping, 20-second eating and two-tear planning, approved target-product state routing, strong human narrative Prompt compilation, image/text synchronization, QA, and DOCX delivery. Use when the user explicitly asks to test V3/Canonical/新版系统 or wants the fully automated recommended workflow with one source of truth and no direct-generation bypass.
 ---
 
 # 视频改款系统 V3 Canonical
@@ -11,7 +11,7 @@ description: Run a canonical, non-bypassable Jimeng commercial-video remix syste
 
 ## 必读
 
-完整读取 [references/canonical-contract.md](references/canonical-contract.md)。榴莲大福任务还必须读取活动版 `$durian-daifuku-five-states` 的产品规范、批准资产和视频状态机；DOCX使用 `$documents`。
+完整读取 [references/canonical-contract.md](references/canonical-contract.md)。目标产品任务还必须读取当前选定产品 Skill 的产品规范、批准资产和视频状态机；DOCX使用 `$documents`。
 
 ## 唯一入口
 
@@ -28,7 +28,7 @@ description: Run a canonical, non-bypassable Jimeng commercial-video remix syste
 2. 自动识别人物数量；单人物建立一个角色，多人物建立稳定ID，画外声只在有证据或用户指定时建立。
 3. 完整口播拆成line ID；每个line ID必须在Canonical中显式绑定镜头和声源，系统不按容量猜测去向。每个line ID恰好一次，叙事段只引用ID或概述。
 4. 吃食目标按时长计算：低于20秒不强行补入；达到20秒后为`max(源片已有有效事件数, 3 + floor((目标时长-20)/10))`。源片和已批准示范中的有效入口全部保留，只补缺口；补入事件绑定既有源帧和既有S镜头，不新建伪造S编号。双手掰开目标为`max(源片已有有效过程数,2)`。
-5. 纸箱、纸盒和袋子在原帧区域替换为批准榴莲大福包装体系。
+5. 纸箱、纸盒和袋子在原帧区域替换为批准的目标产品包装体系。
 6. 每个图像任务生成锁定区域、替换区域、尺度锚点、产品状态、包装状态、参考资产角色和哈希收据。正式生图不得绕过任务manifest。
 7. Prompt分两阶段：先编译事实动作脚本，再增强为强烈活人感叙事。人物、纯手部、微距和纯产品按`shot_mode`分流。启用源片表演证据合同时，人物镜头必须从原片记录的视线轨迹、眉眼微反应、肩线/重心、双手职责、声音观察和情绪落点写出连续因果，Prompt还必须回写源片动作锚点；情绪不能靠固定形容词或重复段落代替。负面限制不超过必要范围，复制区不输出内部“触发”字段。
 8. 自动QA后最多自修复两轮。只对无法消解的说话人、屏内/画外或身份参考冲突询问一次。

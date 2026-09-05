@@ -32,7 +32,7 @@ def default_target() -> Path:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Install the durian-daifuku Codex skill bundle.")
+    parser = argparse.ArgumentParser(description="Install the video product-insertion Codex skill bundle.")
     parser.add_argument("--target", type=Path, default=default_target(), help="Codex skills directory")
     parser.add_argument("--force", action="store_true", help="replace existing skills after making backups")
     return parser.parse_args()
