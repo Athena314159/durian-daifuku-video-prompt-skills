@@ -43,6 +43,20 @@ python3 install.py --force
 
 也可以手动把 `skills/` 下的三个文件夹复制到个人 Codex Skills 目录，然后重新启动 Codex。
 
+## V2 Canonical（新版系统）
+
+仓库现在同时提供 `video-remix-system-v2-canonical`。它是按源片证据编译的新版入口：会锁定源镜头顺序、源帧哈希、口播 line ID、人物/纯手部/微距镜头边界，并按目标时长计算吃食镜头数量。静态图层通过火山引擎 Ark 调用 Seedream 5.0；视频生成后端需要另行接入。
+
+第一次使用新版系统，先阅读 [`skills/video-remix-system-v2-canonical/QUICKSTART_CN.md`](skills/video-remix-system-v2-canonical/QUICKSTART_CN.md)。说明书按“自测 → 编译 → 校验 → Seedream 干跑 →（有凭证时）提交静态图”的顺序写，适合不熟悉命令行的使用者。
+
+安装新版系统：
+
+```bash
+python3 install.py --force
+```
+
+安装器会先替换同名 Skill，并保留旧目录的安全迁移逻辑；安装完成后重启 Codex。
+
 ## 调用方式
 
 把视频发给 Codex，并使用以下任一说法：
